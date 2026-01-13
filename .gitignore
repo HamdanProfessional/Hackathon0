@@ -1,0 +1,103 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+.uv/
+env/
+ENV/
+
+# Sensitive credentials - NEVER COMMIT
+credentials.json
+client_secret.json
+client_secret*.json
+*.token.json
+token_*.json
+.gmail_token.json
+.calendar_token.json
+.xero_credentials.json
+.xero_token.json
+.xero_mcp_token.json
+.gmail_mcp_token.json
+.calendar_mcp_token.json
+.slack_mcp_token.json
+mcp_tokens.json
+.env
+.env.local
+.env.*.local
+
+# Browser sessions
+whatsapp_session/
+chrome_debug/
+ChromeDebug/
+*.crsession
+*.session
+
+# Log files
+Logs/
+*.log
+AI_Employee_Vault/Logs/
+
+# Action files (optional - comment out if tracking in git)
+# Needs_Action/
+# Pending_Approval/
+# Approved/
+# Rejected/
+# Plans/
+# Done/
+# Inbox/
+
+# Obsidian
+.obsidian/workspace
+.obsidian/workspace-mobile
+.obsidian/plugins
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+*.bak
+*.swp
+*~
+.~*
+
+# Screenshots and debug files
+debug_screenshot.png
+dry_run_preview.png
+error_debug.png
+*.png.debug
+
+# Test files
+test_*.py
+*_test.py
+*_test.md
+
+# Archive
+Archive/
+extra/
+
+# MCP servers
+mcp-servers/*/node_modules/
+mcp-servers/*/.env/
+mcp-servers/*/package-lock.json
+
+# Process manager
+pm2_*.log

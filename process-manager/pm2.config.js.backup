@@ -1,0 +1,237 @@
+/**
+ * PM2 Configuration
+ *
+ * Process Manager 2 configuration file for running all AI Employee processes.
+ *
+ * Usage:
+ *   pm2 start ecosystem.config.js
+ *
+ * To set up:
+ *   npm install -g pm2
+ *   pm2 start ecosystem.config.js --env .env
+ *   pm2 save
+ *   pm2 startup
+ */
+
+module.exports = {
+  "apps": [
+    {
+      name: "gmail-watcher",
+      "script": "python -m watchers.gmail_watcher --vault AI_Employee_Vault --credentials client_secret.json",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_restarts": 10,
+      "max_memory_restart": "500M",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+
+    {
+      name: "calendar-watcher",
+      "script": "python -m watchers.calendar_watcher --vault AI_Employee_Vault --credentials client_secret.json",
+      "interpreter": "python3",
+      "exec_mode": "watchdog",
+      "autorestart": true,
+      "watch": ["watchers/calendar_watcher.py", "watchers/base_watcher.py"],
+      "max_restarts": 10,
+      "max_memory_restart": "500M",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+
+    {
+      name: "xero-watcher",
+      "script": "python -m watchers.xero_watcher --vault AI_Employee_Vault --credentials .xero_credentials.json",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": ["watchers/xero_watcher.py"],
+      "max_restarts": 5,  // Fewer restarts for critical financial data
+      "max_memory_restart": "500M",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+
+    {
+      name: "slack-watcher",
+      "script": "python -m watchers.slack_watcher --vault AI_Employee_Vault",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_restarts": 10,
+      "max_memory_restart": "500M",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "watchdog",
+      "script": "python orchestrator.py --vault AI_Employee_Vault",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": ["orchestrator.py"],
+      "max_restarts": 10,
+      "max_memory_restart": "200M",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "daily-briefing",
+      "script": "python .claude/skills/weekly-briefing/scripts/generate_ceo_briefing.py --vault AI_Employee_Vault --once",
+      "interpreter": "3.10",
+      "cron": "0 7 * * *",  // Every day at 7 AM
+      "autostart": true,
+      "watch": false,
+      "max_restarts": 1,  // Run once then stop
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "daily-review",
+      "script": "python .claude/skills/daily-review/scripts/generate_daily_plan.py --vault AI_Employee_Vault",
+      "interpreter": "3.10",
+      "cron": "0 6 * * 1-5",  // Every weekday at 6 AM
+      "autostart": true,
+      "watch": false,
+      "max_restarts": 1,
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "social-media-scheduler",
+      "script": "python .claude/skills/social-media-manager/scripts/generate_content_calendar.py --vault AI_Employee_Vault",
+      "interpreter": "3.10",
+      "cron": "0 8 * * 1,4,7",  // Mon/Wed/Fri at 8 AM
+      "autostart": true,
+      "watch": false,
+      "max_restarts": 1,
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "invoice-review",
+      "script": "python .claude/skills/accounting/scripts/generate_report.py --vault AI_Employee_Vault --month " + new Date().toISOString().slice(0, 7) + " --output Accounting/report_" + new Date().toISOString().slice(0, 7) + ".md",
+      "interpreter": "3.10",
+      "cron": "0 17 * * 1",  // Every Monday at 5 PM
+      "autostart": true,
+      "watch": false,
+      "max_restarts": 1,
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "audit-log-cleanup",
+      "script": "python utils/audit_logging.py cleanup --vault AI_Employee_Vault",
+      "interpreter": "3.10",
+      "cron": "0 3 * * 0",  // Every Sunday at 3 AM
+      "autostart": true,
+      "watch": false,
+      "max_restarts": 1,
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "linkedin-approval-monitor",
+      "script": "python scripts/social-media/linkedin_approval_monitor.py --vault AI_Employee_Vault",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_restarts": 10,
+      "max_memory_restart": "200M",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "whatsapp-watcher",
+      "script": "python watchers/whatsapp_watcher_playwright.py --vault AI_Employee_Vault --session ./whatsapp_session",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_restarts": 10,
+      "max_memory_restart": "500M",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    },
+
+    {
+      name: "meta-approval-monitor",
+      "script": "python scripts/social-media/meta_approval_monitor.py --vault AI_Employee_Vault",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_restarts": 10,
+      "max_memory_restart": "200M",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault",
+        "META_DRY_RUN": "true"  // Set to "false" for live posting
+      }
+    },
+
+    {
+      name: "twitter-approval-monitor",
+      "script": "python scripts/social-media/twitter_approval_monitor.py --vault AI_Employee_Vault",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_restarts": 10,
+      "max_memory_restart": "200M",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault",
+        "TWITTER_DRY_RUN": "true"  // Set to "false" for live posting
+      }
+    },
+
+    {
+      name: "filesystem-watcher",
+      "script": "python -m watchers.filesystem_watcher --vault AI_Employee_Vault --watch-folder ./AI_Employee_Vault/Inbox",
+      "interpreter": "python3",
+      "exec_mode": "fork",
+      "autorestart": true,
+      "watch": false,
+      "max_restarts": 10,
+      "max_memory_restart": "200M",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "VAULT_PATH": "AI_Employee_Vault"
+      }
+    }
+  ]
+}
