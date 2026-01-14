@@ -21,6 +21,10 @@ from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 
 class SlackApprovalHandler(FileSystemEventHandler):
     """

@@ -20,8 +20,11 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
-from xero import Xero
-from xero.auth import OAuth2Credentials
+# Import from xero_python package (new package structure)
+import xero_python
+from xero_python.accounting import AccountingApi
+from xero_python.api_client import ApiClient
+from xero_python.identity import IdentityApi
 from requests_oauthlib import OAuth2Session
 
 from .base_watcher import BaseWatcher
@@ -75,8 +78,8 @@ class XeroWatcher(BaseWatcher):
             dry_run: If True, don't create files
         """
         super().__init__(vault_path, check_interval, dry_run)
-        self.credentials_path = credentials_path or str(vault_path / ".xero_credentials.json")
-        self.token_path = token_path or str(vault_path / ".xero_token.json")
+        self.credentials_path = credentials_path or str(Path(vault_path) / ".xero_credentials.json")
+        self.token_path = token_path or str(Path(vault_path) / ".xero_token.json")
         self.tenant_id = tenant_id
         self.xero_client = None
         self.accounting_path = self.vault_path / "Accounting"
@@ -99,7 +102,7 @@ class XeroWatcher(BaseWatcher):
 
         # Load or create token
         if os.path.exists(self.token_path):
-            with open(self.token_path, "r") as f:
+            with open(self.token_path, "t") as f:
                 token_data = json.load(f)
 
             # Refresh if expired
@@ -108,20 +111,23 @@ class XeroWatcher(BaseWatcher):
                 if datetime.now() >= expires_at:
                     token_data = self._refresh_token(token_data, credentials)
 
-            self.xero_client = Xero(
-                OAuth2Credentials(
-                    client_id=credentials["clientId"],
-                    client_secret=credentials["clientSecret"],
-                    token=token_data,
-                )
-            )
+            # Create Xero client with xero_python
+            credentials_dict = {
+                "clientId": credentials["clientId"],
+                "clientSecret": credentials["clientSecret"],
+                "token": token_data,
+            }
+            from xero_python import __version__ as xero_version
+            print(f"Xero Python version: {xero_version}")
+
+            self.xero_client = ApiClient(credentials_dict)
+            self.logger.info("Xero API authenticated successfully via xero_python")
+
         else:
             # Need to run OAuth flow
             raise ValueError(
                 "Xero token not found. Please run authenticate() first."
             )
-
-        self.logger.info("Xero API authenticated successfully")
 
     def _refresh_token(self, token_data: dict, credentials: dict) -> dict:
         """Refresh expired OAuth token."""
