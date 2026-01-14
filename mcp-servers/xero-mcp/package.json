@@ -1,0 +1,34 @@
+{
+  "name": "xero-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Xero accounting integration - Create invoices, manage contacts, track payments",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "watch": "tsc --watch",
+    "authenticate": "tsc && node dist/authenticate.js"
+  },
+  "keywords": [
+    "mcp",
+    "xero",
+    "accounting",
+    "invoice"
+  ],
+  "author": "Personal AI Employee",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "xero-node": "^5.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
