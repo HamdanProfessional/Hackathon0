@@ -18,8 +18,6 @@ Note:
 
 import argparse
 import os
-import random
-import time
 import sys
 from pathlib import Path
 
@@ -35,6 +33,14 @@ except ImportError:
     print("Playwright not installed. Run: pip install playwright")
     sys.exit(1)
 
+# Import shared automation helpers
+try:
+    from automation_helpers import human_click, human_type_character_by_character
+except ImportError:
+    print("Error: automation_helpers.py not found.")
+    print("Please ensure automation_helpers.py is in the same directory.")
+    sys.exit(1)
+
 
 # ==================== CONFIGURATION ====================
 
@@ -45,105 +51,11 @@ except ImportError:
 DRY_RUN = os.getenv('META_DRY_RUN', 'true').lower() == 'true'
 
 META_BUSINESS_SUITE_URL = "https://business.facebook.com/latest/composer"
-CDP_ENDPOINT = "http://localhost:9222"
-
-# Human behavior parameters
-TYPING_MIN_DELAY = 0.01  # Minimum delay between keystrokes (seconds)
-TYPING_MAX_DELAY = 0.03  # Maximum delay between keystrokes (seconds)
-THINKING_PAUSE_PROBABILITY = 0.15  # 15% chance of a thinking pause
-THINKING_PAUSE_DURATION = 0.5  # Duration of thinking pause
-
-HOVER_MIN_DELAY = 0.1  # Minimum hover before click (seconds)
-HOVER_MAX_DELAY = 0.3  # Maximum hover before click (seconds)
+CDP_ENDPOINT = "http://127.0.0.1:9222"  # IPv4 for Windows compatibility
 
 # Page load delays (Meta Business Suite is heavy)
 INITIAL_PAGE_LOAD_DELAY = 5.0  # Wait after navigation
 NETWORK_IDLE_TIMEOUT = 60000  # 60 seconds for network to settle
-
-
-# ==================== HELPER FUNCTIONS ====================
-
-def human_type(page, selector, text):
-    """
-    Type text character-by-character to mimic human typing.
-
-    Does NOT use page.type() or page.fill() which are instant.
-    Instead, focuses the element and presses each key individually
-    with random delays to simulate variable typing speed.
-
-    Args:
-        page: Playwright page object
-        selector: CSS selector for the input field
-        text: Text to type
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        print(f"🖐️  Human-typing into: {selector}")
-
-        # Click to focus the element first
-        page.click(selector, timeout=15000)
-        time.sleep(random.uniform(0.2, 0.5))  # Small pause after focusing
-
-        # Type character by character
-        for i, char in enumerate(text):
-            # Press the key (this is like a human pressing a key)
-            page.keyboard.press(char)
-
-            # Random delay between keystrokes (variable typing speed)
-            delay = random.uniform(TYPING_MIN_DELAY, TYPING_MAX_DELAY)
-            time.sleep(delay)
-
-            # Occasional "thinking" pause (simulating human thought)
-            if random.random() < THINKING_PAUSE_PROBABILITY:
-                print(f"      ⏸️  Thinking pause...")
-                time.sleep(THINKING_PAUSE_DURATION)
-
-        print(f"✅ Finished typing ({len(text)} chars)")
-        return True
-
-    except Exception as e:
-        print(f"❌ human_type failed: {e}")
-        return False
-
-
-def human_click(page, selector, description="element"):
-    """
-    Click an element with human-like hover behavior.
-
-    Does NOT click immediately. First hovers over the element
-    (like a human moving their mouse), then waits a random duration,
-    then clicks.
-
-    Args:
-        page: Playwright page object
-        selector: CSS selector for the element
-        description: Human-readable description for logging
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        print(f"🖱️  Human-clicking: {description} ({selector})")
-
-        # First hover over the element (like moving mouse there)
-        page.hover(selector, timeout=15000)
-        print(f"      👆 Hovering...")
-
-        # Random delay while hovering (like human hesitation)
-        hover_delay = random.uniform(HOVER_MIN_DELAY, HOVER_MAX_DELAY)
-        time.sleep(hover_delay)
-
-        # Then click
-        page.click(selector, timeout=15000, force=True)
-        print(f"✅ Clicked after {hover_delay:.2f}s hover")
-
-        return True
-
-    except Exception as e:
-        print(f"❌ human_click failed: {e}")
-        return False
 
 
 # ==================== MAIN POSTING LOGIC ====================
@@ -208,7 +120,7 @@ def select_platforms(page):
                 instagram_selected = True
                 print("✅ Instagram selected")
                 break
-        except:
+        except Exception:
             continue
 
     if not instagram_selected:
@@ -255,7 +167,7 @@ def create_meta_post(page, post_content, include_facebook=True, include_instagra
         # Wait for network to be mostly idle
         try:
             page.wait_for_load_state("networkidle", timeout=NETWORK_IDLE_TIMEOUT)
-        except:
+        except PlaywrightTimeoutError:
             print("   ⚠️  Network did not fully idle, proceeding anyway...")
 
         print("✅ Page loaded\n")
@@ -291,10 +203,10 @@ def create_meta_post(page, post_content, include_facebook=True, include_instagra
                 # Try to find and click on the text area
                 if page.is_visible(selector, timeout=5000):
                     print(f"   Found text area with: {selector}")
-                    if human_type(page, selector, post_content):
+                    if human_type_character_by_character(page, selector, post_content):
                         typed = True
                         break
-            except:
+            except Exception:
                 continue
 
         if not typed:
@@ -329,7 +241,7 @@ def create_meta_post(page, post_content, include_facebook=True, include_instagra
                         break
                     else:
                         print(f"   Found but disabled: {selector}")
-            except:
+            except Exception:
                 continue
 
         if not publish_button:

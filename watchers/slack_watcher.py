@@ -163,7 +163,13 @@ class SlackWatcher(BaseWatcher):
                     limit=100
                 )
 
-                conversations.extend(response["channels"])
+                # Validate response has channels field before accessing
+                channels = response.get("channels")
+                if channels is not None:
+                    conversations.extend(channels)
+                else:
+                    self.logger.warning(f"Response missing 'channels' field: {response}")
+                    break
 
                 cursor = response.get("response_metadata", {}).get("next_cursor")
                 if not cursor:

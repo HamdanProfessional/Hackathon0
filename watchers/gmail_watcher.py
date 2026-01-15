@@ -125,11 +125,17 @@ class GmailWatcher(BaseWatcher):
             full_messages = []
             for msg in messages[:10]:  # Limit to 10 per check
                 try:
-                    full_msg = self._get_message_details(msg["id"])
+                    # Validate message has required id field
+                    msg_id = msg.get("id")
+                    if not msg_id:
+                        self.logger.warning(f"Skipping message without id: {msg}")
+                        continue
+
+                    full_msg = self._get_message_details(msg_id)
                     if full_msg:
                         full_messages.append(full_msg)
                 except HttpError as e:
-                    self.logger.error(f"Error fetching message {msg['id']}: {e}")
+                    self.logger.error(f"Error fetching message {msg.get('id', 'unknown')}: {e}")
 
             # Log to audit
             self._log_audit_action("gmail_check", {
@@ -213,14 +219,14 @@ class GmailWatcher(BaseWatcher):
             # Extract message ID from filename
             existing_message_id = None
             try:
-                with open(existing_file, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    # Extract message ID from file
-                    if "message_id:" in content:
-                        # Extract message ID from: message_id:   # message_id: 16 chars
-                        existing_message_id = content.split("message_id:")[-1].strip()
+                content = existing_file.read_text(encoding='utf-8')
+                # Extract message_id from frontmatter (more precise regex)
+                import re
+                match = re.search(r'message_id:\s*(\S+)', content)
+                if match:
+                    existing_message_id = match.group(1)
             except Exception as e:
-                self.logger.warning(f"Could not read existing file: {existing_file.name}: {e}")
+                self.logger.debug(f"Could not read existing file: {existing_file.name}: {e}")
 
             # If this message ID already has an action file, skip creating duplicate
             if existing_message_id == message_id:

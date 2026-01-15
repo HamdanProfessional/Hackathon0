@@ -11,7 +11,7 @@ Setup:
 
 import os
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
 
 import google.auth
@@ -298,6 +298,8 @@ created: {datetime.now().isoformat()}
             for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d"):
                 try:
                     event_dt = datetime.strptime(event_time, fmt)
+                    # Assume parsed time is in local timezone, convert to UTC for comparison
+                    event_dt = event_dt.replace(tzinfo=None)  # Naive datetime
                     break
                 except ValueError:
                     continue
@@ -305,8 +307,8 @@ created: {datetime.now().isoformat()}
             if not event_dt:
                 return None
 
-            # Add timezone assumption (local time)
-            now = datetime.now()
+            # Use UTC now for consistent comparison
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             delta = event_dt - now
 
             if delta.total_seconds() <= 0:

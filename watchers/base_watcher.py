@@ -6,6 +6,7 @@ the required methods: check_for_updates() and create_action_file().
 """
 
 import time
+import json
 import logging
 from pathlib import Path
 from abc import ABC, abstractmethod
@@ -113,7 +114,6 @@ class BaseWatcher(ABC):
 
         # Append to log file (JSONL format)
         with open(log_file, "a", encoding="utf-8") as f:
-            import json
             f.write(json.dumps(log_entry) + "\n")
 
     def process_item(self, item: Any) -> Optional[Path]:

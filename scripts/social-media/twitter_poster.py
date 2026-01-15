@@ -15,8 +15,6 @@ Note:
 
 import argparse
 import os
-import random
-import time
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -33,6 +31,15 @@ except ImportError:
     print("Playwright not installed. Run: pip install playwright")
     sys.exit(1)
 
+# Import shared automation helpers
+try:
+    from automation_helpers import human_type, human_click
+except ImportError:
+    print("Error: automation_helpers.py not found.")
+    print("Please ensure automation_helpers.py is in the same directory.")
+    sys.exit(1)
+
+
 # ==================== CONFIGURATION ====================
 
 # DRY_RUN: Set to False to actually publish tweets
@@ -41,15 +48,7 @@ except ImportError:
 # 2. Command-line flag: --live or --dry-run
 DRY_RUN = os.getenv('TWITTER_DRY_RUN', 'true').lower() == 'true'
 TWEETER_BASE_URL = "https://X.com"  # Twitter/X URL
-CDP_ENDPOINT = "http://localhost:9222"
-
-# Human behavior parameters
-TYPING_MIN_DELAY = 0.01  # Minimum delay between keystrokes
-TYPING_MAX_DELAY = 0.03  # Maximum delay between keystrokes
-THINKING_PAUSE_PROBABILITY = 0.15  # 15% chance of a thinking pause
-THINKING_PAUSE_DURATION = 0.5  # Duration of thinking pause
-HOVER_MIN_DELAY = 0.1  # Minimum hover before click
-HOVER_MAX_DELAY = 0.3  # Maximum hover before click
+CDP_ENDPOINT = "http://127.0.0.1:9222"  # IPv4 for Windows compatibility
 
 # Twitter-specific timing
 INITIAL_PAGE_LOAD_DELAY = 3.0  # Wait for page load
@@ -71,57 +70,6 @@ POST_BUTTON_ALTS = [
 # Reply-specific selector
 REPLY_BUTTON_SELECTOR = 'div[role="button"][data-testid="reply"]'
 QUOTE_BUTTON_SELECTOR = 'div[role="button"][data-testid="quote"]'
-
-
-def human_type(page, selector, text):
-    """
-    Type text using Ctrl+V (paste) instead of character-by-character.
-    """
-    try:
-        print(f"🐦 Pasting into Twitter (Ctrl+V)...")
-
-        # Focus on the text area first
-        page.click(selector, timeout=15000)
-        time.sleep(random.uniform(0.2, 0.5))
-
-        # Copy text to clipboard and paste
-        page.evaluate(f"navigator.clipboard.writeText(`{text}`)")
-        time.sleep(0.1)
-        page.keyboard.press("Control+V")
-        time.sleep(0.5)
-
-        print(f"✅ Finished pasting ({len(text)} chars)")
-        return True
-
-    except Exception as e:
-        print(f"❌ human_type failed: {e}")
-        return False
-
-
-def human_click(page, selector, description="element"):
-    """
-    Click an element with human-like hover behavior.
-    """
-    try:
-        print(f"🖱️  Human-clicking: {description}")
-
-        # First hover over the element
-        page.hover(selector, timeout=15000)
-        print(f"      👆 Hovering...")
-
-        # Random delay while hovering
-        hover_delay = random.uniform(HOVER_MIN_DELAY, HOVER_MAX_DELAY)
-        time.sleep(hover_delay)
-
-        # Then click
-        page.click(selector, timeout=15000)
-        print(f"✅ Clicked after {hover_delay:.2f}s hover")
-
-        return True
-
-    except Exception as e:
-        print(f"❌ human_click failed: {e}")
-        return False
 
 
 def post_tweet(page, tweet_content, reply_to=None):
@@ -157,7 +105,7 @@ def post_tweet(page, tweet_content, reply_to=None):
         try:
             page.wait_for_load_state("networkidle", timeout=NETWORK_IDLE_TIMEOUT)
             print("✅ Twitter loaded\n")
-        except:
+        except PlaywrightTimeoutError:
             print("⚠️  Network not fully idle, proceeding anyway...\n")
 
         # Step 2: Compose tweet
@@ -200,7 +148,7 @@ def post_tweet(page, tweet_content, reply_to=None):
                         if human_click(page, selector, "Post button"):
                             posted = True
                             break
-                except:
+                except Exception:
                     continue
 
             if not posted:

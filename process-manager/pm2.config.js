@@ -81,7 +81,7 @@ module.exports = {
     {
       name: "filesystem-watcher",
       script: "run_filesystem_watcher.py",
-      args: "--vault AI_Employee_Vault --watch-folder AI_Employee_Vault/Inbox",
+      args: "--vault AI_Employee_Vault --watch-folder Inbox",
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -96,7 +96,7 @@ module.exports = {
     {
       name: "whatsapp-watcher",
       script: "run_whatsapp_watcher.py",
-      args: "--vault AI_Employee_Vault --session ./whatsapp_session --headless",
+      args: "--vault AI_Employee_Vault --session ./whatsapp_session",
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -237,8 +237,8 @@ module.exports = {
     },
     {
       name: "social-media-scheduler",
-      script: ".claude/skills/social-media-manager/scripts/generate_content_calendar.py",
-      args: "--vault AI_Employee_Vault",
+      script: ".claude/skills/social-media-manager/scripts/generate_linkedin_ai.py",
+      args: "--vault AI_Employee_Vault --count 5",
       interpreter: "python",
       cron: "0 8 * * 1,3,5",  // 8 AM Mon, Wed, Fri
       autorestart: false,
@@ -269,6 +269,31 @@ module.exports = {
       watch: false,
       env: {
         "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      name: "auto-approver",
+      script: "scripts/auto_approver.py",
+      args: "--vault AI_Employee_Vault",
+      interpreter: "python",
+      cron: "*/5 * * * *",  // Every 5 minutes
+      autorestart: false,
+      watch: false,
+      env: {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+
+    // AI EMPLOYEE DASHBOARD
+    {
+      name: "ai-employee-dashboard",
+      script: "dashboard/server.js",
+      interpreter: "node",
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      env: {
+        "NODE_ENV": "production"
       }
     },
   ]

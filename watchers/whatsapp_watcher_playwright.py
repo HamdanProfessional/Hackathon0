@@ -70,6 +70,9 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
         self.headless = headless
         self.processed_messages = set()
 
+        # Load already processed messages from existing files
+        self._load_processed_messages()
+
         # Persistent browser context and page
         self.playwright = None
         self.browser = None
@@ -81,6 +84,37 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
         logger.info(f"WhatsApp watcher initialized with Playwright")
         logger.info(f"Session path: {self.session_path}")
         logger.info(f"Headless: {headless}")
+        logger.info(f"Already processed: {len(self.processed_messages)} messages")
+
+    def _load_processed_messages(self):
+        """Load IDs of already processed messages from existing action files."""
+        try:
+            existing_files = list(self.needs_action.glob("WHATSAPP_*.md"))
+            for filepath in existing_files:
+                # Extract message ID from filename
+                # Format: WHATSAPP_WHATSAPP_PREVIEW_YYYYMMDD_HHMMSS_INDEX.md or WHATSAPP_WHATSAPP_YYYYMMDD_HHMMSS_INDEX.md
+                parts = filepath.stem.split('_')
+                if len(parts) >= 3:
+                    # Create a stable key from sender + content hash (not timestamp)
+                    content = filepath.read_text(encoding='utf-8')
+                    # Extract content between "## Message Content" and next "##"
+                    if '## Message Content' in content:
+                        message_content = content.split('## Message Content')[1].split('##')[0].strip()
+                        # Create hash from sender + first 100 chars of content
+                        import hashlib
+                        content_hash = hashlib.md5((filepath.stem.split('_')[-1] + message_content[:100]).encode()).hexdigest()[:8]
+                        self.processed_messages.add(content_hash)
+
+            logger.info(f"Loaded {len(self.processed_messages)} already processed messages from existing files")
+        except Exception as e:
+            logger.debug(f"Could not load processed messages: {e}")
+
+    def _get_message_id(self, sender: str, content: str, index: int) -> str:
+        """Generate a stable message ID based on content, not timestamp."""
+        import hashlib
+        # Create stable ID from sender + content hash + index
+        content_hash = hashlib.md5((sender + content[:100] + str(index)).encode()).hexdigest()[:8]
+        return f"WHATSAPP_MSG_{content_hash}"
 
     def _start_browser(self):
         """Start the browser and keep it open for subsequent checks."""
@@ -341,8 +375,6 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
             chats_to_check = min(10, chat_count)
             logger.info(f"Checking last {chats_to_check} chats for keywords: {', '.join(self.KEYWORDS)}")
 
-            processed_ids = set()  # Avoid duplicates
-
             # NEW: First check chat list preview for keywords (faster, no clicking needed)
             logger.info("Phase 1: Scanning chat list previews for keywords...")
             preview_info = page.evaluate("""() => {
@@ -406,9 +438,10 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
             # If we found messages in previews, create action files directly without clicking
             if preview_info.get('found', 0) > 0:
                 for msg_data in preview_info.get('messages', []):
-                    msg_id = f"WHATSAPP_PREVIEW_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{msg_data['index']}"
-                    if msg_id not in processed_ids:
-                        processed_ids.add(msg_id)
+                    # Use stable ID based on content
+                    msg_id = self._get_message_id(msg_data['sender'], msg_data['content'], msg_data['index'])
+                    if msg_id not in self.processed_messages:
+                        self.processed_messages.add(msg_id)
 
                         messages.append({
                             'id': msg_id,
@@ -521,11 +554,11 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
                             logger.info(f"Chat {i} - Message {msg_idx} from {sender}: {msg_text[:100]}...")
 
                             if self._is_important(msg_text):
-                                # Create unique ID based on sender and content
-                                msg_id = f"WHATSAPP_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{i}"
+                                # Use stable ID based on content
+                                msg_id = self._get_message_id(sender, msg_text, i)
 
-                                if msg_id not in processed_ids:
-                                    processed_ids.add(msg_id)
+                                if msg_id not in self.processed_messages:
+                                    self.processed_messages.add(msg_id)
 
                                     messages.append({
                                         'id': msg_id,
@@ -553,9 +586,9 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
 
                             for line in lines:
                                 if self._is_important(line):
-                                    msg_id = f"WHATSAPP_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{i}"
-                                    if msg_id not in processed_ids:
-                                        processed_ids.add(msg_id)
+                                    msg_id = self._get_message_id(current_sender, line, i)
+                                    if msg_id not in self.processed_messages:
+                                        self.processed_messages.add(msg_id)
 
                                         messages.append({
                                             'id': msg_id,

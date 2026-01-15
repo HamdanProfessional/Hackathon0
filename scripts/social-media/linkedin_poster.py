@@ -16,8 +16,6 @@ Note:
 
 import sys
 import argparse
-import random
-import time
 import os
 from pathlib import Path
 from datetime import datetime
@@ -37,6 +35,14 @@ except ImportError:
     print("  playwright install chromium")
     sys.exit(1)
 
+# Import shared automation helpers
+try:
+    from automation_helpers import human_type, human_click
+except ImportError:
+    print("Error: automation_helpers.py not found.")
+    print("Please ensure automation_helpers.py is in the same directory.")
+    sys.exit(1)
+
 
 # ==================== CONFIGURATION ====================
 
@@ -50,93 +56,9 @@ LINKEDIN_URL = "https://www.linkedin.com/feed/"
 LINKEDIN_CREATE_POST_URL = "https://www.linkedin.com/in/hamdan-mohammad-922486374/overlay/create-post/"
 CDP_ENDPOINT = "http://127.0.0.1:9222"  # Chrome DevTools Protocol endpoint (IPv4)
 
-# Human behavior parameters (for hover delays)
-HOVER_MIN_DELAY = 0.1  # Minimum hover before click (seconds) - FAST
-HOVER_MAX_DELAY = 0.3  # Maximum hover before click (seconds) - FAST
-
 # Page load timing
 INITIAL_PAGE_LOAD_DELAY = 3.0  # Wait for page load
 NETWORK_IDLE_TIMEOUT = 30000  # 30 seconds for network to settle
-
-
-# ==================== HELPER FUNCTIONS ====================
-
-def human_type(page, selector, text, description="text area"):
-    """
-    Type text using copy-paste (Ctrl+V) for fast posting.
-
-    Much faster than character-by-character typing.
-    Copies text to clipboard, then pastes it.
-
-    Args:
-        page: Playwright page object
-        selector: CSS selector for the input field
-        text: Text to type
-        description: Human-readable description for logging
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        print(f"📋 Fast-pasting into {description}...")
-
-        # Click to focus the element first
-        page.click(selector, timeout=15000)
-        time.sleep(random.uniform(0.2, 0.5))  # Small pause after focusing
-
-        # Copy text to clipboard using JavaScript
-        escaped_text = text.replace('`', '\\`').replace('$', '\\$')
-        page.evaluate(f"navigator.clipboard.writeText(`{escaped_text}`)")
-        time.sleep(0.1)
-
-        # Paste using Ctrl+V
-        page.keyboard.press("Control+V")
-        time.sleep(0.3)
-
-        print(f"✅ Finished pasting ({len(text)} chars)")
-        return True
-
-    except Exception as e:
-        print(f"❌ human_type failed: {e}")
-        return False
-
-
-def human_click(page, selector, description="element"):
-    """
-    Click an element with human-like hover behavior.
-
-    Does NOT click immediately. First hovers over the element
-    (like a human moving their mouse), then waits a random duration,
-    then clicks.
-
-    Args:
-        page: Playwright page object
-        selector: CSS selector for the element
-        description: Human-readable description for logging
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        print(f"🖱️  Human-clicking: {description}")
-
-        # First hover over the element (like moving mouse there)
-        page.hover(selector, timeout=15000)
-        print(f"      👆 Hovering...")
-
-        # Random delay while hovering (like human hesitation)
-        hover_delay = random.uniform(HOVER_MIN_DELAY, HOVER_MAX_DELAY)
-        time.sleep(hover_delay)
-
-        # Then click
-        page.click(selector, timeout=15000, force=True)
-        print(f"✅ Clicked after {hover_delay:.2f}s hover")
-
-        return True
-
-    except Exception as e:
-        print(f"❌ human_click failed: {e}")
-        return False
 
 
 # ==================== MAIN POSTING LOGIC ====================
@@ -201,7 +123,7 @@ def post_to_linkedin(post_content: str, headless: bool = False) -> bool:
                         print(f"✅ Detected logged in (found: {indicator})!")
                         logged_in = True
                         break
-                except:
+                except Exception:
                     continue
 
             if not logged_in:
@@ -218,7 +140,7 @@ def post_to_linkedin(post_content: str, headless: bool = False) -> bool:
                         if page.query_selector(indicator):
                             is_login_page = True
                             break
-                    except:
+                    except Exception:
                         continue
 
                 if is_login_page:
@@ -255,7 +177,7 @@ def post_to_linkedin(post_content: str, headless: bool = False) -> bool:
             try:
                 page.wait_for_load_state("networkidle", timeout=NETWORK_IDLE_TIMEOUT)
                 print("✅ LinkedIn loaded\n")
-            except:
+            except PlaywrightTimeoutError:
                 print("⚠️  Network not fully idle, proceeding anyway...\n")
 
             # Step 2: Navigate to create post overlay
@@ -269,7 +191,7 @@ def post_to_linkedin(post_content: str, headless: bool = False) -> bool:
                 # Try to find the content editor
                 page.wait_for_selector('div[contenteditable="true"]', timeout=10000)
                 print("✅ Create post modal loaded\n")
-            except:
+            except PlaywrightTimeoutError:
                 print("⚠️  Modal might not be fully loaded, trying anyway...\n")
 
             # Step 3: Type the post content
@@ -291,7 +213,7 @@ def post_to_linkedin(post_content: str, headless: bool = False) -> bool:
                         if human_type(page, selector, post_content, "post editor"):
                             typed = True
                             break
-                except:
+                except Exception:
                     continue
 
             if not typed:
@@ -332,7 +254,7 @@ def post_to_linkedin(post_content: str, headless: bool = False) -> bool:
                                     break
                             else:
                                 print(f"      ⚠️  Found Post button but it's disabled: {selector}")
-                    except:
+                    except Exception:
                         continue
 
                 if not posted:
@@ -341,7 +263,7 @@ def post_to_linkedin(post_content: str, headless: bool = False) -> bool:
                         page.get_by_role("button", name="Post").click(timeout=5000)
                         posted = True
                         print("✅ Clicked via role/name")
-                    except:
+                    except Exception:
                         pass
 
                 if not posted:

@@ -30,13 +30,12 @@ from requests_oauthlib import OAuth2Session
 from .base_watcher import BaseWatcher
 
 
-# Xero API scopes
+# Xero API scopes (valid OAuth 2.0 scopes only)
 SCOPES = [
     "accounting.transactions",
     "accounting.reports.read",
     "accounting.contacts",
-    "accounting.invoices",
-    "accounting.banktransactions",
+    "offline_access",  # Required for refresh tokens
 ]
 
 
@@ -102,25 +101,53 @@ class XeroWatcher(BaseWatcher):
 
         # Load or create token
         if os.path.exists(self.token_path):
-            with open(self.token_path, "t") as f:
+            with open(self.token_path, "r") as f:
                 token_data = json.load(f)
 
             # Refresh if expired
             if token_data.get("expires_at"):
-                expires_at = datetime.fromisoformat(token_data["expires_at"])
+                expires_at = datetime.fromtimestamp(token_data["expires_at"])
                 if datetime.now() >= expires_at:
                     token_data = self._refresh_token(token_data, credentials)
 
-            # Create Xero client with xero_python
-            credentials_dict = {
-                "clientId": credentials["clientId"],
-                "clientSecret": credentials["clientSecret"],
-                "token": token_data,
-            }
+            # Create Xero client with xero_python SDK
+            from xero_python.api_client.configuration import Configuration
+            from xero_python.api_client.oauth2 import OAuth2Token
             from xero_python import __version__ as xero_version
             print(f"Xero Python version: {xero_version}")
 
-            self.xero_client = ApiClient(credentials_dict)
+            # Store token data for refresh
+            self.token_data = token_data
+            self.credentials = credentials
+
+            # Create proper Configuration object
+            config = Configuration(
+                debug=False,
+                oauth2_token=OAuth2Token(
+                    client_id=credentials["clientId"],
+                    client_secret=credentials["clientSecret"],
+                ),
+            )
+
+            self.xero_client = ApiClient(config)
+
+            # Register token saver
+            @self.xero_client.oauth2_token_saver
+            def save_token(token):
+                """Save token to file."""
+                token["tenant_id"] = self.token_data.get("tenant_id", "")
+                token["tenant_name"] = self.token_data.get("tenant_name", "")
+                with open(self.token_path, "w") as f:
+                    json.dump(token, f, indent=2)
+                self.token_data = token
+
+            # Set token on client
+            self.xero_client.set_oauth2_token(token_data)
+
+            self.tenant_id = token_data.get("tenant_id")
+            if not self.tenant_id:
+                raise ValueError("tenant_id not found in token file. Please re-authenticate.")
+
             self.logger.info("Xero API authenticated successfully via xero_python")
 
         else:
@@ -133,12 +160,12 @@ class XeroWatcher(BaseWatcher):
         """Refresh expired OAuth token."""
         session = OAuth2Session(
             client_id=credentials["clientId"],
-            client_secret=credentials["clientSecret"],
             token=token_data,
         )
 
         token = session.refresh_token(
             "https://identity.xero.com/connect/token",
+            client_secret=credentials["clientSecret"],
             refresh_token=token_data["refresh_token"],
         )
 
@@ -486,10 +513,9 @@ def authenticate(credentials_path: str, token_path: str) -> None:
     with open(credentials_path, "r") as f:
         credentials = json.load(f)
 
-    # Create OAuth session
+    # Create OAuth session (client_secret is used when fetching token, not here)
     session = OAuth2Session(
         client_id=credentials["clientId"],
-        client_secret=credentials["clientSecret"],
         scope=SCOPES,
         redirect_uri=credentials.get("redirectUri", "http://localhost:3000/callback"),
     )
@@ -499,27 +525,72 @@ def authenticate(credentials_path: str, token_path: str) -> None:
         "https://login.xero.com/identity/connect/authorize"
     )
 
-    print(f"Please visit this URL to authorize:")
-    print(auth_url)
+    print("\n" + "=" * 60)
+    print("XERO OAUTH AUTHENTICATION")
+    print("\n" + "=" * 60)
+    print("\n1. Please visit this URL to authorize:")
+    print(f"   {auth_url}")
+    print("\n2. Log in to Xero (if not already logged in)")
+    print("3. Select your organization/tenant")
+    print("\n4. After authorization, you'll be redirected to localhost:3000/callback")
+    print("\n5. Copy the full callback URL and paste it below:\n")
 
     # Get callback URL with code
     callback_url = input("Enter the full callback URL: ")
 
     # Fetch token
-    token = session.fetch_token(
-        "https://identity.xero.com/connect/token",
-        authorization_response=callback_url,
-        include_client_id=True,
-    )
+    try:
+        token = session.fetch_token(
+            "https://identity.xero.com/connect/token",
+            client_secret=credentials["clientSecret"],
+            authorization_response=callback_url,
+        )
 
-    # Get tenants
-    # (You may need to list tenants and select one)
+        # Get tenants
+        print("\n✅ Authentication successful!")
+        print(f"Token received, expires: {token.get('expires_at', 'unknown')}")
 
-    # Save token
-    with open(token_path, "w") as f:
-        json.dump(token, f, indent=2)
+        # Save token
+        with open(token_path, "w") as f:
+            json.dump(token, f, indent=2)
 
-    print(f"Authentication successful! Token saved to {token_path}")
+        print(f"✅ Token saved to: {token_path}")
+
+        # Now get the tenant ID
+        print("\n" + "=" * 60)
+        print("GETTING TENANT ID")
+        print("\n" + "=" * 60)
+        print("\n⚠️  IMPORTANT: You also need your XERO_TENANT_ID!")
+        print("   1. Log in to Xero")
+        print("   2. Go to: https://my.xero.com/Settings/Organization Settings")
+        print("   3. Your Tenant ID is in the URL (e.g., xyz123abc)")
+        print("\n   Enter your Tenant ID below or press Enter if you have it:")
+
+        tenant_id = input("Enter Xero Tenant ID (or press Enter to skip): ").strip()
+
+        if tenant_id:
+            # Save tenant_id to token for future use
+            with open(token_path, "r+") as f:
+                token_data = json.load(f)
+            token_data["tenant_id"] = tenant_id
+            f.seek(0)
+            json.dump(token_data, f, indent=2)
+            print(f"✅ Tenant ID saved to: {token_path}")
+        else:
+            print(f"\n⚠️  No tenant ID provided. You'll need to add it manually to {token_path}")
+            print('   Add this to your token file: "tenant_id": "YOUR_TENANT_ID"')
+
+    except Exception as e:
+        print(f"\n❌ Authentication failed: {e}")
+        print("\nTroubleshooting:")
+        print("1. Make sure your credentials.json has correct client_id and client_secret")
+        print("2. Check that your Xero app has the correct OAuth scopes enabled")
+        print("3. Ensure redirect URI matches your Xero app settings")
+
+    print(f"\n" + "=" * 60)
+    print(f"After setup, restart the watcher:")
+    print("  pm2 restart xero-watcher")
+    print("\n" + "=" * 60 + "\n")
 
 
 def main():
@@ -569,10 +640,31 @@ def main():
     args = parser.parse_args()
 
     if args.authenticate:
+        # Set default paths based on vault if not provided
+        vault_path = Path(args.vault)
+
+        # Fix Windows path handling
         if not args.credentials:
-            args.credentials = args.vault + "/.xero_credentials.json"
+            args.credentials = str(vault_path / ".xero_credentials.json")
         if not args.token:
-            args.token = args.vault + "/.xero_token.json"
+            args.token = str(vault_path / ".xero_token.json")
+
+        # Check if credentials file exists
+        if not os.path.exists(args.credentials):
+            print(f"\n❌ Credentials file not found: {args.credentials}")
+            print(f"   Expected location: {args.credentials}")
+            print(f"\nPlease ensure {args.credentials} exists with your Xero app credentials.")
+            return
+
+        # Check if credentials file has real credentials (not placeholders)
+        with open(args.credentials, "r") as f:
+            creds = json.load(f)
+            if "your_xero_client_id" in creds.get("clientId", ""):
+                print(f"\n❌ You still have placeholder credentials in {args.credentials}")
+                print(f"   Please update with your real Xero credentials:")
+                print(f"   clientId: YOUR_REAL_CLIENT_ID")
+                print(f"   clientSecret: YOUR_REAL_CLIENT_SECRET")
+                return
 
         authenticate(args.credentials, args.token)
         return

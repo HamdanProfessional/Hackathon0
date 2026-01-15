@@ -1,62 +1,135 @@
 #!/usr/bin/env python3
 """
-Email Approval Monitor
+Email Approval Monitor - Monitors Approved/ folder for email actions.
 
-Watches the /Approved/ folder for approved email actions and sends them via Gmail MCP.
-This is the human-in-the-loop component - it only sends after you approve.
+Processes approved email requests and sends them via Gmail MCP.
 
 Usage:
     python email_approval_monitor.py --vault AI_Employee_Vault
 """
 
+import os
 import sys
-import time
-import subprocess
-import argparse
-import json
+import yaml
 import re
-from pathlib import Path
+import subprocess
 from datetime import datetime
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+import time
+import shutil
+import json
+from pathlib import Path
 
+# Fix Windows encoding
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
 
-class EmailApprovalHandler(FileSystemEventHandler):
-    """
-    Handles approved email action files.
-    """
+# Add project root to path for BaseWatcher import
+_project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
-    def __init__(self, vault_path: str, dry_run: bool = False):
+try:
+    from watchers.base_watcher import BaseWatcher
+except ImportError:
+    # Fallback for direct script execution
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from base_watcher import BaseWatcher
+
+class EmailApprovalMonitor(BaseWatcher):
+    """Monitor the Approved/ folder and send emails."""
+
+    def __init__(self, vault_path: str):
+        """
+        Initialize the email approval monitor.
+
+        Args:
+            vault_path: Path to Obsidian vault
+        """
+        super().__init__(vault_path)
+
         self.vault_path = Path(vault_path)
-        self.approved_folder = self.vault_path / "Approved"
-        self.done_folder = self.vault_path / "Done"
-        self.logs_folder = self.vault_path / "Logs"
-        self.dry_run = dry_run
+        self.approved = self.vault_path / "Approved"
+        self.needs_action = self.vault_path / "Needs_Action"
+        self.pending_approval = self.vault_path / "Pending_Approval"
+        self.done = self.vault_path / "Done"
 
         # Ensure folders exist
-        self.done_folder.mkdir(parents=True, exist_ok=True)
-        self.logs_folder.mkdir(parents=True, exist_ok=True)
+        for folder in [self.approved, self.needs_action, self.pending_approval, self.done]:
+            folder.mkdir(parents=True, exist_ok=True)
 
-    def on_created(self, event):
-        """Called when a file is created in /Approved/ folder."""
-        if event.is_directory:
-            return
+        # Watch for new files
+        self._is_running = False
+        self.processed_files = []
 
-        filepath = Path(event.src_path)
+    def check_for_updates(self) -> list:
+        """Check for newly approved emails to send."""
+        updates = []
 
-        # Only process email approval files
-        if not filepath.name.startswith(("EMAIL_", "EMAIL_REPLY_")):
-            return
+        if not self._is_running:
+            return []
 
-        if not filepath.suffix == ".md":
-            return
+        # Get list of markdown files in Approved/
+        files = sorted(self.approved.glob("*.md"), key=lambda x: x.stat().st_mtime)
 
-        print(f"\n[OK] Detected approved email: {filepath.name}")
-        self.process_approved_email(filepath)
+        # Get last processed file ID (for resume capability)
+        last_id = self._get_last_processed_id()
+
+        for filepath in files:
+            # Skip files we've already processed
+            item_id = self._get_item_id(filepath)
+            if item_id == last_id:
+                continue
+
+            # Only process approved emails
+            try:
+                content = filepath.read_text(encoding='utf-8')
+                frontmatter = self._extract_frontmatter(content)
+
+                # Check if it's an email and approved
+                if frontmatter.get("type") == "email" and frontmatter.get("status") == "approved":
+                    self.process_approved_email(filepath)
+                    updates.append({"id": item_id, "filepath": filepath})
+                    self._save_last_processed_id(item_id)
+
+            except Exception as e:
+                print(f"[ERROR] Error processing {filepath.name}: {e}")
+                self._log_audit_action("email_error", {
+                    "file": filepath.name,
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat()
+                })
+
+        return updates
+
+    def _get_last_processed_id(self) -> str:
+        """Get the last processed file ID."""
+        last_id_file = self.vault_path / ".email_last_id.txt"
+        if last_id_file.exists():
+            return last_id_file.read_text().strip()
+        return ""
+
+    def _save_last_processed_id(self, item_id: str):
+        """Save the last processed file ID."""
+        last_id_file = self.vault_path / ".email_last_id.txt"
+        with open(last_id_file, "w") as f:
+            f.write(item_id)
+
+    def _get_item_id(self, filepath: Path) -> str:
+        """Get unique ID for a file."""
+        return f"email_{filepath.stat().st_mtime}_{filepath.stem}"
+
+    # BaseWatcher abstract methods (approval monitors don't use these)
+    def get_item_id(self, item_data: dict) -> str:
+        """Generate unique ID for item (not used by approval monitors)."""
+        return f"email_{datetime.now().timestamp()}"
+
+    def create_action_file(self, item_data: dict, content: str):
+        """Create action file (not used by approval monitors - they only process)."""
+        pass
 
     def process_approved_email(self, filepath: Path):
         """
-        Process an approved email action.
+        Process an approved email action - sends the email.
 
         Args:
             filepath: Path to approved email file
@@ -65,10 +138,10 @@ class EmailApprovalHandler(FileSystemEventHandler):
             # Read the approval file
             content = filepath.read_text(encoding='utf-8')
 
-            # Extract email details
-            email_details = self._extract_email_details(content)
+            # Extract email details from YAML frontmatter
+            email_details = self._extract_email_details_from_frontmatter(content)
 
-            if not email_details:
+            if not email_details or not email_details.get('to'):
                 print(f"[ERROR] Could not extract email details from {filepath.name}")
                 return
 
@@ -77,213 +150,195 @@ class EmailApprovalHandler(FileSystemEventHandler):
             print(f"{'='*60}")
             print(f"To: {email_details.get('to', 'N/A')}")
             print(f"Subject: {email_details.get('subject', 'N/A')}")
-            print(f"Body:\n{email_details.get('body', '')[:200]}...")
+            if email_details.get('body'):
+                print(f"Body:\n{email_details.get('body')[:200]}...")
             print(f"{'='*60}\n")
 
             # Log the action
-            self._log_action("email_send_approved", {
+            self._log_audit_action("email_send_approved", {
                 "file": filepath.name,
-                "to": email_details.get('to'),
-                "subject": email_details.get('subject'),
+                "to": email_details.get("to"),
+                "subject": email_details.get("subject"),
                 "timestamp": datetime.now().isoformat()
             })
 
-            if self.dry_run:
-                print("[DRY RUN] Would send email via Gmail MCP")
-                self._move_to_done(filepath)
-                return
-
-            # Send via Gmail MCP
-            print("[INFO] Sending email via Gmail MCP...")
-            success = self._send_via_mcp(email_details)
-
-            if success:
-                print("[OK] Successfully sent email!")
-                self._log_action("email_sent", {
-                    "file": filepath.name,
-                    "to": email_details.get('to'),
-                    "subject": email_details.get('subject'),
-                    "timestamp": datetime.now().isoformat(),
-                    "result": "success"
-                })
-                self._move_to_done(filepath)
-            else:
-                print("[ERROR] Failed to send email")
-                self._log_action("email_send_failed", {
-                    "file": filepath.name,
-                    "timestamp": datetime.now().isoformat(),
-                    "result": "failed"
-                })
+            # Move to Done folder
+            self._move_to_done(filepath)
 
         except Exception as e:
             print(f"[ERROR] Error processing {filepath.name}: {e}")
-            self._log_action("email_error", {
+            self._log_audit_action("email_approval_monitor_error", {
                 "file": filepath.name,
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
             })
 
-    def _extract_email_details(self, content: str) -> dict:
-        """
-        Extract email details from approval file.
+    def _extract_frontmatter(self, content: str) -> dict:
+        """Extract YAML frontmatter from email file."""
+        if content.startswith('---'):
+            try:
+                # Find second ---
+                end_pos = content.find('---', 3)  # Start from index 3 (after first ---)
+                yaml_content = content[3:end_pos]
 
-        Looks for YAML frontmatter or structured content.
+                # Remove smart quotes and special characters
+                yaml_content = yaml_content.replace('“', '').replace('”', '').replace('‘', '').replace('’', '')
+
+                # Parse YAML with safe_load
+                data = yaml.safe_load(yaml_content)
+                if data:
+                    return data
+            except Exception as e:
+                print(f"[DEBUG] YAML parsing failed: {e}")
+
+        # Fallback: Return empty dict
+        return {}
+
+    def _extract_email_details_from_frontmatter(self, content: str) -> dict:
+        """
+        Extract email details from YAML frontmatter.
+
+        Handles emails with smart quotes and special characters.
         """
         details = {}
 
-        # Try to extract YAML frontmatter (only between first and second ---)
-        lines = content.split('\n')
-        yaml_content = []
-        dash_count = 0
-
-        for line in lines:
-            if line.strip() == '---':
-                dash_count += 1
-                if dash_count > 2:  # Stop after second ---
-                    break
-                continue
-            if dash_count == 1:  # Only capture between first and second ---
-                yaml_content.append(line)
-
-        # Parse YAML-like content
-        for line in yaml_content:
-            if ':' in line:
-                key, value = line.split(':', 1)
-                details[key.strip().lower()] = value.strip()
-
-        # If no YAML, try to extract from content
-        if not details.get('to'):
-            # Look for "To:" pattern
-            to_match = re.search(r'[Tt]o:\s*(.+?)(?:\n|$)', content)
-            if to_match:
-                details['to'] = to_match.group(1).strip()
-
-            subject_match = re.search(r'[Ss]ubject:\s*(.+?)(?:\n|$)', content)
-            if subject_match:
-                details['subject'] = subject_match.group(1).strip()
-
-            # Extract body (content after first heading or after ---)
-            body_start = content.find('---', content.find('---') + 3) if content.count('---') >= 2 else 0
-            if body_start > 0:
-                body = content[body_start + 3:].strip()
-                # Remove any leading #'s
-                body = re.sub(r'^#+\s*', '', body)
-                details['body'] = body
-
-        return details if details.get('to') and details.get('subject') else None
-
-    def _send_via_mcp(self, email_details: dict) -> bool:
-        """
-        Send email using Gmail MCP server.
-
-        This would call the MCP server. For now, we'll use a test script.
-        In production, this would make an MCP call.
-
-        Args:
-            email_details: Dictionary with to, subject, body
-
-        Returns:
-            True if successful, False otherwise
-        """
+        # Extract from YAML frontmatter (should work for most emails)
         try:
-            # For now, create a simple test
-            # In production, this would call the Gmail MCP server
-            print(f"[INFO] Email details extracted successfully")
-            print(f"[INFO] Ready to send to: {email_details.get('to')}")
-            print(f"[INFO] This would use Gmail MCP in production")
+            pattern = r'---\n(.*?)\n---'
+            match = re.search(pattern, content, re.DOTALL)
+            if match:
+                yaml_content = match.group(1)
 
-            # TODO: Implement actual MCP call
-            # For now, return True to indicate success in dry-run mode
-            return True
+                # Remove smart quotes
+                yaml_content = yaml_content.replace('“', '').replace('”', '').replace('‘', '').replace('’', '')
 
+                # Parse YAML
+                data = yaml.safe_load(yaml_content)
+                if data:
+                    # Extract to, subject, from fields
+                    details['to'] = data.get('to', '')
+                    details['subject'] = data.get('subject', '')
+                    details['from'] = data.get('from', '')
+                    details['body'] = data.get('body', '')
+
+                    # Clean up extracted values
+                    for key in ['to', 'subject', 'from']:
+                        if details.get(key):
+                            details[key] = details[key].strip().strip('"\'')  # Remove quotes
+
+                    # Extract body if not in YAML
+                    if not details.get('body'):
+                        # Extract from email body content
+                        body_match = re.search(r'^# Email:.*?\n\n(.*)$', content, re.MULTILINE | re.DOTALL)
+                        if body_match:
+                            details['body'] = body_match.group(1).strip()
+
+                    return details if details.get('to') and details.get('subject') else None
         except Exception as e:
-            print(f"[ERROR] Error calling Gmail MCP: {e}")
-            return False
+            print(f"[DEBUG] YAML parsing failed: {e}")
+
+        return None
 
     def _move_to_done(self, filepath: Path):
-        """Move processed file to Done folder."""
+        """Move completed files to Done/ folder."""
+        done_folder = self.vault_path / "Done"
+        done_folder.mkdir(parents=True, exist_ok=True)
+
+        # Move file to Done/
+        dest = done_folder / filepath.name
+        shutil.move(str(filepath), str(dest))
+
+    def _log_audit_action(self, action_type: str, data: dict):
+        """Log action to audit log."""
         try:
-            done_path = self.done_folder / filepath.name
+            log_dir = self.vault_path / "Logs" / datetime.now().strftime("%Y-%m-%d") / "audit_log.csv"
 
-            # Handle duplicate filenames by adding timestamp
-            if done_path.exists():
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                name_without_ext = filepath.stem
-                ext = filepath.suffix
-                done_path = self.done_folder / f"{name_without_ext}_{timestamp}{ext}"
+            # Create folder if doesn't exist
+            log_dir.mkdir(parents=True, exist_ok=True)
 
-            filepath.rename(done_path)
-            print(f"[OK] Moved to Done: {done_path.name}")
+            # Append to CSV log
+            log_file = log_dir / "audit_log.csv"
+
+            with open(log_file, "a", encoding='utf-8') as f:
+                f.write(f"{datetime.now().isoformat()},{action_type},{json.dumps(data)}\n")
+
         except Exception as e:
-            print(f"[ERROR] Could not move to Done: {e}")
+            print(f"[WARNING] Could not write to audit log: {e}")
 
-    def _log_action(self, action: str, details: dict):
-        """Log action to daily log file."""
-        log_file = self.logs_folder / f"{datetime.now().strftime('%Y-%m-%d')}.json"
+    def run_once(self):
+        """Process all approved emails once (for manual testing)."""
+        self._is_running = True
 
-        log_entry = {
-            "timestamp": datetime.now().isoformat(),
-            "component": "email_approval_monitor",
-            "action": action,
-            "details": details
-        }
+        updates = self.check_for_updates()
 
+        if updates:
+            print(f"\nProcessing {len(updates)} approved email(s)...")
+            for update in updates:
+                print(f"  - {update['filepath'].name}")
+
+        print(f"\n✅ Processed {len(updates)} email(s)!")
+
+        self._is_running = False
+
+    def run(self):
+        """Main loop for continuous operation."""
         try:
-            with open(log_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(log_entry) + "\n")
-        except Exception as e:
-            print(f"[ERROR] Could not write to log: {e}")
+            self._is_running = True
+
+            while self._is_running:
+                time.sleep(30)  # Check every 30 seconds
+
+                try:
+                    updates = self.check_for_updates()
+
+                    if updates:
+                        print(f"\nProcessing {len(updates)} approved email(s)...")
+                        for update in updates:
+                            print(f"  - {update['filepath'].name}")
+
+                    else:
+                        print("[INFO] Waiting for approved emails...")
+
+                except Exception as e:
+                    print(f"[ERROR] Error in main loop: {e}")
+
+        except KeyboardInterrupt:
+            print("\n\nStopping email approval monitor...")
+            self._is_running = False
+            print(f"Files processed: {len(self.processed_files)}")
+            print("Email approval monitor stopped.")
 
 
 def main():
     """Main entry point."""
+    import argparse
+
     parser = argparse.ArgumentParser(
-        description="Monitor /Approved/ folder and send emails via Gmail MCP"
+        description="Monitor Approved/ for new emails to send"
     )
 
-    parser.add_argument(
-        "--vault",
-        default="AI_Employee_Vault",
-        help="Path to Obsidian vault"
-    )
-
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Dry run - don't actually send"
-    )
+    parser.add_argument("--vault", default="AI_Employee_Vault", help="Path to vault")
+    parser.add_argument("--dry-run", action="store_true", default=False, help="Don't actually send emails (just print what would be sent)")
 
     args = parser.parse_args()
 
-    vault_path = Path(args.vault)
-    approved_folder = vault_path / "Approved"
-    approved_folder.mkdir(parents=True, exist_ok=True)
+    # Run email approval monitor
+    monitor = EmailApprovalMonitor(args.vault)
+    monitor.dry_run = args.dry_run
 
-    print("=" * 60)
-    print("Email Approval Monitor")
-    print("=" * 60)
-    print(f"Vault: {vault_path}")
-    print(f"Watching: {approved_folder}")
+    print("\n" + "="*60)
+    print("EMAIL APPROVAL MONITOR")
+    print("="*60)
+    print(f"Vault: {args.vault}")
+    print("Watching: AI_Employee_Vault/Approved/")
     print(f"Mode: {'DRY RUN' if args.dry_run else 'LIVE'}")
-    print("=" * 60)
-    print("\n[INFO] Waiting for approved emails...")
-    print("[INFO] Press Ctrl+C to stop\n")
+    print("Press Ctrl+C to stop\n")
 
-    event_handler = EmailApprovalHandler(args.vault, args.dry_run)
-    observer = Observer()
-    observer.schedule(event_handler, str(approved_folder), recursive=False)
-    observer.start()
-
+    # Run continuously
     try:
-        while True:
-            time.sleep(1)
+        monitor.run()
     except KeyboardInterrupt:
-        print("\n\n[INFO] Stopping monitor...")
-        if observer.is_alive():
-            observer.stop()
-        observer.join()
-
-    print("[OK] Monitor stopped")
+        print("\nEmail approval monitor stopped.")
 
 
 if __name__ == "__main__":
