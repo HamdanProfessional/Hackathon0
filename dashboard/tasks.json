@@ -1,0 +1,59 @@
+[
+  {
+    "id": 1,
+    "title": "Review pending emails",
+    "description": "Check and process pending approval requests",
+    "status": "done",
+    "priority": "high",
+    "tags": [
+      "email",
+      "urgent"
+    ],
+    "created": "2026-01-15T16:27:19.082Z"
+  },
+  {
+    "id": 2,
+    "title": "Generate weekly briefing",
+    "description": "Create CEO briefing from vault data",
+    "status": "todo",
+    "priority": "medium",
+    "tags": [
+      "reporting"
+    ],
+    "created": "2026-01-15T16:27:19.082Z"
+  },
+  {
+    "id": 3,
+    "title": "Update social media queue",
+    "description": "Review and schedule pending posts",
+    "status": "todo",
+    "priority": "low",
+    "tags": [
+      "social"
+    ],
+    "created": "2026-01-15T16:27:19.082Z"
+  },
+  {
+    "id": 4,
+    "title": "Fix calendar watcher",
+    "description": "Debug authentication issues",
+    "status": "done",
+    "priority": "high",
+    "tags": [
+      "bug",
+      "technical"
+    ],
+    "created": "2026-01-15T16:27:19.082Z"
+  },
+  {
+    "id": 5,
+    "title": "Set up Xero integration",
+    "description": "Configure MCP server for accounting",
+    "status": "todo",
+    "priority": "medium",
+    "tags": [
+      "integration"
+    ],
+    "created": "2026-01-15T16:27:19.082Z"
+  }
+]

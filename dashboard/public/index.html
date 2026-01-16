@@ -1,0 +1,2269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Employee Dashboard v2.0</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js for analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --card-bg: #1e293b;
+      --card-border: rgba(255,255,255,0.1);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --accent-green: #10b981;
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-orange: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-cyan: #06b6d4;
+      --shadow-soft: 0 10px 30px rgba(0,0,0,0.3);
+      --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+      --border-radius: 12px;
+      --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'Courier New', monospace;
+      --transition: all 0.2s ease;
+      --gradient-text: linear-gradient(90deg, #22d3ee, #8b5cf6);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--card-border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      position: fixed;
+      height: 100vh;
+      z-index: 50;
+      overflow-y: auto;
+    }
+
+    .sidebar-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      background: var(--gradient-text);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-item {
+      padding: 12px 15px;
+      margin-bottom: 5px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-secondary);
+      transition: var(--transition);
+      font-weight: 500;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      border-left: 3px solid var(--accent-blue);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 20px 0;
+      padding: 15px;
+      background: var(--bg-tertiary);
+      border-radius: var(--border-radius);
+    }
+
+    .stat-box {
+      text-align: center;
+      padding: 10px;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-top: 5px;
+    }
+
+    .stat-value.online { color: var(--accent-green); }
+    .stat-value.stopped { color: var(--accent-red); }
+    .stat-value.pending { color: var(--accent-orange); }
+    .stat-value.done { color: var(--accent-blue); }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: 280px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--card-border);
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .top-bar h1 {
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .top-bar-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      background: var(--accent-blue);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover { opacity: 0.8; }
+    .btn-danger { background: var(--accent-red); }
+    .btn-success { background: var(--accent-green); }
+    .btn-secondary { background: var(--bg-tertiary); }
+    .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+
+    /* Content Sections */
+    .content-section {
+      display: none;
+      padding: 25px;
+    }
+
+    .content-section.active {
+      display: block;
+    }
+
+    .section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Health Cards */
+    .health-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .health-card {
+      background: var(--bg-tertiary);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .health-card .icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    .health-card .label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+
+    .health-card .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .health-card.success .icon, .health-card.success .value { color: var(--accent-green); }
+    .health-card.warning .icon, .health-card.warning .value { color: var(--accent-orange); }
+    .health-card.error .icon, .health-card.error .value { color: var(--accent-red); }
+    .health-card.info .icon, .health-card.info .value { color: var(--accent-blue); }
+
+    /* Process Cards */
+    .process-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+    }
+
+    .process-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 15px;
+      transition: var(--transition);
+    }
+
+    .process-card:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .process-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .process-name {
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .process-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 10px var(--accent-green);
+    }
+
+    .process-dot.offline {
+      background: var(--text-secondary);
+      box-shadow: none;
+    }
+
+    .process-status {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .status-online {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--accent-green);
+    }
+
+    .status-stopped {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--accent-red);
+    }
+
+    .process-info {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin: 5px 0;
+    }
+
+    .process-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* Process Tabs */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--card-border);
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-primary);
+    }
+
+    .tab.active {
+      color: var(--accent-blue);
+      border-bottom-color: var(--accent-blue);
+    }
+
+    .tab-count {
+      background: var(--bg-primary);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .tab.active .tab-count {
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--accent-blue);
+    }
+
+    .tab-content {
+      position: relative;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    /* Pending Items */
+    .pending-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 15px;
+    }
+
+    .pending-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 15px;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pending-card:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+    }
+
+    .pending-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .pending-card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .pending-card-icon.linkedin { background: rgba(0, 119, 181, 0.2); color: #0077b5; }
+    .pending-card-icon.twitter { background: rgba(29, 161, 242, 0.2); color: #1da1f2; }
+    .pending-card-icon.instagram { background: rgba(225, 48, 108, 0.2); color: #e1306c; }
+    .pending-card-icon.facebook { background: rgba(66, 103, 178, 0.2); color: #4267b2; }
+    .pending-card-icon.email { background: rgba(234, 67, 53, 0.2); color: #ea4335; }
+    .pending-card-icon.slack { background: rgba(74, 21, 75, 0.2); color: #4a154b; }
+    .pending-card-icon.whatsapp { background: rgba(37, 211, 102, 0.2); color: #25d366; }
+    .pending-card-icon.xero { background: rgba(27, 59, 111, 0.2); color: #1b3b6f; }
+    .pending-card-icon.unknown { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+
+    .pending-card-meta {
+      text-align: right;
+    }
+
+    .pending-card-type {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .pending-card-time {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .pending-card-content {
+      background: var(--bg-primary);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      flex: 1;
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .pending-card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pending-card-actions .btn {
+      flex: 1;
+      padding: 10px;
+      font-size: 0.85rem;
+    }
+
+    /* Logs Viewer */
+    .logs-container {
+      background: #000;
+      border-radius: var(--border-radius);
+      padding: 15px;
+      max-height: 600px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    .log-entry {
+      padding: 8px 0;
+      border-bottom: 1px solid #222;
+      display: flex;
+      gap: 15px;
+    }
+
+    .log-time {
+      color: #6b7280;
+      min-width: 80px;
+    }
+
+    .log-type {
+      min-width: 120px;
+      font-weight: 600;
+    }
+
+    .log-message {
+      flex: 1;
+      word-break: break-all;
+    }
+
+    .log-success { color: #10b981; }
+    .log-error { color: #ef4444; }
+    .log-info { color: #3b82f6; }
+    .log-warning { color: #f59e0b; }
+
+    .logs-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .logs-controls input, .logs-controls select {
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    .logs-controls select {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    /* Analytics */
+    .chart-container {
+      position: relative;
+      height: 250px;
+      margin: 15px 0;
+    }
+
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+    }
+
+    /* File Browser */
+    .folder-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .folder-item {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .folder-item:hover {
+      border-color: var(--accent-blue);
+      background: var(--bg-secondary);
+      transform: translateY(-2px);
+    }
+
+    .folder-icon {
+      font-size: 2.5rem;
+      color: var(--accent-blue);
+    }
+
+    .folder-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .folder-count {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      padding: 4px 12px;
+      border-radius: 12px;
+    }
+
+    /* Folder colors */
+    .folder-item.pending .folder-icon { color: #f59e0b; }
+    .folder-item.approved .folder-icon { color: #10b981; }
+    .folder-item.done .folder-icon { color: #8b5cf6; }
+    .folder-item.needs .folder-icon { color: #3b82f6; }
+    .folder-item.plans .folder-icon { color: #ec4899; }
+    .folder-item.logs .folder-icon { color: #6b7280; }
+    .folder-item.accounting .folder-icon { color: #06b6d4; }
+    .folder-item.rejected .folder-icon { color: #ef4444; }
+    .folder-item.temp .folder-icon { color: #94a3b8; }
+
+    /* File list */
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .file-item {
+      background: var(--bg-primary);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 12px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .file-item:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .file-info {
+      flex: 1;
+    }
+
+    .file-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .file-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .file-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .file-badge.email { background: rgba(234, 67, 53, 0.2); color: #ea4335; }
+    .file-badge.linkedin_post { background: rgba(0, 119, 181, 0.2); color: #0077b5; }
+    .file-badge.twitter_post { background: rgba(29, 161, 242, 0.2); color: #1da1f2; }
+    .file-badge.instagram_post { background: rgba(225, 48, 108, 0.2); color: #e1306c; }
+    .file-badge.facebook_post { background: rgba(66, 103, 178, 0.2); color: #4267b2; }
+    .file-badge.whatsapp_message { background: rgba(37, 211, 102, 0.2); color: #25d366; }
+    .file-badge.slack_message { background: rgba(74, 21, 75, 0.2); color: #4a154b; }
+    .file-badge.xero_alert { background: rgba(27, 59, 111, 0.2); color: #1b3b6f; }
+    .file-badge.unknown { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      background: var(--bg-secondary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-soft);
+      animation: slideIn 0.3s ease;
+      min-width: 300px;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .toast.success { border-left: 4px solid var(--accent-green); }
+    .toast.error { border-left: 4px solid var(--accent-red); }
+    .toast.info { border-left: 4px solid var(--accent-blue); }
+    .toast.warning { border-left: 4px solid var(--accent-orange); }
+
+    /* Notification Center */
+    .notification-center {
+      position: relative;
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--accent-red);
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    }
+
+    .notification-dropdown {
+      position: fixed;
+      top: 70px;
+      right: 20px;
+      width: 380px;
+      max-height: 500px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-soft);
+      z-index: 60;
+      display: none;
+      overflow: hidden;
+    }
+
+    .notification-dropdown.active {
+      display: block;
+      animation: slideDown 0.2s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .notification-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .notification-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .notification-item {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--card-border);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .notification-item:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .notification-item.unread {
+      background: rgba(59, 130, 246, 0.05);
+    }
+
+    .notification-item-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+
+    .notification-item-content {
+      display: inline-block;
+      vertical-align: middle;
+      width: calc(100% - 48px);
+    }
+
+    .notification-item-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .notification-item-time {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .notification-item.success .notification-item-icon { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+    .notification-item.error .notification-item-icon { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+    .notification-item.warning .notification-item-icon { background: rgba(245, 158, 11, 0.2); color: var(--accent-orange); }
+    .notification-item.info .notification-item-icon { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+
+    .notification-empty {
+      padding: 40px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    /* Quick Actions Panel */
+    .quick-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .quick-action-btn {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 15px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .quick-action-btn:hover {
+      border-color: var(--accent-blue);
+      background: var(--bg-secondary);
+      transform: translateY(-2px);
+    }
+
+    .quick-action-btn:active {
+      transform: translateY(0);
+    }
+
+    .quick-action-btn i {
+      font-size: 1.5rem;
+      color: var(--accent-blue);
+    }
+
+    .quick-action-btn.success i { color: var(--accent-green); }
+    .quick-action-btn.warning i { color: var(--accent-orange); }
+    .quick-action-btn.danger i { color: var(--accent-red); }
+
+    .quick-action-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    /* Social Media Queue */
+    .social-queue-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .queue-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .queue-card:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+    }
+
+    .queue-card.has-pending {
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+    }
+
+    .queue-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 10px;
+      font-size: 1.5rem;
+    }
+
+    .queue-icon.linkedin { background: rgba(0, 119, 181, 0.2); color: #0077b5; }
+    .queue-icon.twitter { background: rgba(29, 161, 242, 0.2); color: #1da1f2; }
+    .queue-icon.instagram { background: rgba(225, 48, 108, 0.2); color: #e1306c; }
+    .queue-icon.facebook { background: rgba(66, 103, 178, 0.2); color: #4267b2; }
+
+    .queue-count {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 10px 0;
+    }
+
+    .queue-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .queue-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    /* Error Center */
+    .error-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+    }
+
+    .error-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 15px;
+      transition: var(--transition);
+    }
+
+    .error-card:hover {
+      border-color: var(--accent-red);
+    }
+
+    .error-card.critical {
+      border-color: var(--accent-red);
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .error-card.warning {
+      border-color: var(--accent-orange);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .error-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .error-type {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .error-type i { color: var(--accent-red); }
+    .error-card.warning .error-type i { color: var(--accent-orange); }
+
+    .error-time {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .error-message {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .error-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .error-stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .error-stat {
+      flex: 1;
+      background: var(--bg-tertiary);
+      border-radius: var(--border-radius);
+      padding: 15px;
+      text-align: center;
+    }
+
+    .error-stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .error-stat-value.critical { color: var(--accent-red); }
+    .error-stat-value.warning { color: var(--accent-orange); }
+    .error-stat-value.resolved { color: var(--accent-green); }
+
+    .error-stat-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Advanced Search */
+    .search-container {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 15px 50px 15px 20px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      color: var(--text-primary);
+      font-size: 1rem;
+      transition: var(--transition);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+    }
+
+    .search-filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .search-filter {
+      padding: 8px 15px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-secondary);
+    }
+
+    .search-filter:hover {
+      border-color: var(--accent-blue);
+      color: var(--text-primary);
+    }
+
+    .search-filter.active {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    .search-results {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .search-result-item {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 15px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .search-result-item:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .search-result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .search-result-title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .search-result-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .search-result-preview {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      max-height: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .search-highlight {
+      background: rgba(245, 158, 11, 0.3);
+      padding: 0 4px;
+      border-radius: 3px;
+    }
+
+    /* Settings Panel */
+    .settings-section {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .settings-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+
+    .setting-description {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .setting-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 26px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-primary);
+      border-radius: 26px;
+      transition: var(--transition);
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: var(--transition);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--accent-blue);
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+
+    .theme-selector {
+      display: flex;
+      gap: 10px;
+    }
+
+    .theme-option {
+      padding: 8px 15px;
+      background: var(--bg-primary);
+      border: 2px solid var(--card-border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .theme-option.active {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    /* AI Chat Interface */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: var(--bg-secondary);
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-status {
+      font-size: 0.75rem;
+      color: var(--accent-green);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .chat-status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      background: currentColor;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .chat-message {
+      display: flex;
+      gap: 12px;
+      max-width: 80%;
+    }
+
+    .chat-message.user {
+      flex-direction: row-reverse;
+      margin-left: auto;
+    }
+
+    .chat-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+    }
+
+    .chat-message.ai .chat-avatar {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    }
+
+    .chat-message.user .chat-avatar {
+      background: var(--bg-tertiary);
+    }
+
+    .chat-bubble {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 12px 16px;
+      line-height: 1.5;
+      font-size: 0.9rem;
+    }
+
+    .chat-message.user .chat-bubble {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .chat-input-area {
+      padding: 15px 20px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--card-border);
+    }
+
+    .chat-input-wrapper {
+      display: flex;
+      gap: 10px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px 15px;
+      background: var(--bg-primary);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      resize: none;
+    }
+
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .chat-send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .chat-send-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .chat-send-btn:disabled {
+      background: var(--text-secondary);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .chat-suggestions {
+      display: flex;
+      gap: 8px;
+      padding: 10px 20px 0;
+      overflow-x: auto;
+    }
+
+    .chat-suggestion {
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: 15px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .chat-suggestion:hover {
+      border-color: var(--accent-blue);
+      background: var(--bg-secondary);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-soft);
+      padding: 25px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-content {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--card-border);
+      border-radius: var(--border-radius);
+      padding: 15px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      overflow-x: auto;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .sidebar { width: 220px; }
+      .main-content { margin-left: 220px; }
+    }
+
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--card-border);
+      }
+      .main-content { margin-left: 0; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .pending-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-title"><i class="fas fa-robot"></i> AI Employee v2.0</div>
+
+    <div class="nav-item active" data-section="dashboard">
+      <i class="fas fa-tachometer-alt"></i> Dashboard
+    </div>
+    <div class="nav-item" data-section="processes">
+      <i class="fas fa-server"></i> Processes
+    </div>
+    <div class="nav-item" data-section="pending">
+      <i class="fas fa-clock"></i> Pending
+    </div>
+    <div class="nav-item" data-section="logs">
+      <i class="fas fa-file-alt"></i> Logs
+    </div>
+    <div class="nav-item" data-section="analytics">
+      <i class="fas fa-chart-line"></i> Analytics
+    </div>
+    <div class="nav-item" data-section="files">
+      <i class="fas fa-folder"></i> Files
+    </div>
+    <div class="nav-item" data-section="quick-actions">
+      <i class="fas fa-bolt"></i> Quick Actions
+    </div>
+    <div class="nav-item" data-section="social-queue">
+      <i class="fas fa-share-alt"></i> Social Queue
+    </div>
+    <div class="nav-item" data-section="search">
+      <i class="fas fa-search"></i> Search
+    </div>
+    <div class="nav-item" data-section="settings">
+      <i class="fas fa-cog"></i> Settings
+    </div>
+    <div class="nav-item" data-section="ai-chat">
+      <i class="fas fa-robot"></i> AI Chat
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-label">Online</div>
+        <div class="stat-value online" id="onlineCount">-</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Stopped</div>
+        <div class="stat-value stopped" id="stoppedCount">-</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value pending" id="pendingCount">-</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Done</div>
+        <div class="stat-value done" id="doneCount">-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <h1 id="pageTitle"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+      <div class="top-bar-actions">
+        <!-- Notification Center -->
+        <div class="notification-center">
+          <button class="btn btn-sm btn-secondary" onclick="toggleNotifications()">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge" id="notificationBadge">0</span>
+          </button>
+          <div class="notification-dropdown" id="notificationDropdown">
+            <div class="notification-header">
+              <h3 style="font-size: 0.95rem;">Notifications</h3>
+              <button class="btn btn-sm btn-secondary" onclick="clearAllNotifications()">
+                <i class="fas fa-check-double"></i> Clear All
+              </button>
+            </div>
+            <div class="notification-list" id="notificationList">
+              <!-- Notifications will be loaded here -->
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-sm btn-secondary" onclick="refreshCurrent()">
+          <i class="fas fa-sync"></i> Refresh
+        </button>
+        <button class="btn btn-sm btn-success" onclick="startAll()">
+          <i class="fas fa-play"></i> Start All
+        </button>
+        <button class="btn btn-sm btn-danger" onclick="stopAll()">
+          <i class="fas fa-stop"></i> Stop All
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div class="content-section active" id="section-dashboard">
+      <div class="health-grid" id="healthGrid"></div>
+
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-chart-area"></i> System Health</h2>
+        </div>
+        <div class="chart-container">
+          <canvas id="healthChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Processes Section -->
+    <div class="content-section" id="section-processes">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-server"></i> Processes</h2>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn btn-sm btn-success" onclick="restartAll()">
+              <i class="fas fa-redo"></i> Restart All
+            </button>
+            <button class="btn btn-sm btn-success" onclick="startAllWatchers()">
+              <i class="fas fa-play"></i> Start All
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="stopAllWatchers()">
+              <i class="fas fa-stop"></i> Stop All
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <div class="tab active" onclick="switchProcessTab('all')">
+            <i class="fas fa-server"></i> All Processes
+            <span class="tab-count" id="allProcessesCount">-</span>
+          </div>
+          <div class="tab" onclick="switchProcessTab('watchers')">
+            <i class="fas fa-eye"></i> Watchers & Monitors
+            <span class="tab-count" id="watchersCount">-</span>
+          </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+          <div class="tab-pane active" id="allProcessesTab">
+            <div class="process-grid" id="allProcesses"></div>
+          </div>
+          <div class="tab-pane" id="watchersTab">
+            <div class="process-grid" id="watchersList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Section -->
+    <div class="content-section" id="section-pending">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-clock"></i> Pending Approvals</h2>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="pendingCountBadge" class="type-badge unknown" style="margin: 0;">0 items</span>
+            <button class="btn btn-sm btn-success" onclick="approveAll()">
+              <i class="fas fa-check-double"></i> Approve All
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="rejectAll()">
+              <i class="fas fa-times"></i> Reject All
+            </button>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="logs-controls" style="margin-bottom: 15px;">
+          <input type="text" id="pendingSearch" placeholder="Search pending items..." onkeyup="filterPending()" style="flex: 1;">
+          <select id="pendingTypeFilter" onchange="filterPending()">
+            <option value="">All Types</option>
+            <option value="linkedin_post">LinkedIn</option>
+            <option value="twitter_post">Twitter</option>
+            <option value="instagram_post">Instagram</option>
+            <option value="facebook_post">Facebook</option>
+            <option value="email">Email</option>
+            <option value="slack_message">Slack</option>
+            <option value="whatsapp_message">WhatsApp</option>
+            <option value="xero_alert">Xero</option>
+          </select>
+        </div>
+
+        <div class="pending-grid" id="pendingList"></div>
+      </div>
+    </div>
+
+    <!-- Logs Section -->
+    <div class="content-section" id="section-logs">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-file-alt"></i> PM2 Process Logs</h2>
+          <button class="btn btn-sm btn-success" onclick="loadLogs()">
+            <i class="fas fa-sync"></i> Refresh
+          </button>
+        </div>
+        <div class="logs-controls">
+          <select id="processLogSelector" onchange="loadLogs()">
+            <option value="all">All Processes</option>
+          </select>
+          <input type="number" id="logLines" placeholder="Lines" value="100" min="10" max="500" style="width: 80px;">
+          <button class="btn btn-sm btn-secondary" onclick="loadLogs()">
+            <i class="fas fa-search"></i> Load
+          </button>
+          <label style="display: flex; align-items: center; gap: 5px; color: var(--text-secondary); font-size: 0.9rem;">
+            <input type="checkbox" id="autoRefreshLogs" checked> Auto-refresh (5s)
+          </label>
+        </div>
+        <div class="logs-container" id="logsContainer">
+          <div class="empty-state"><i class="fas fa-terminal"></i><p>Select a process and click Load to view logs</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Section -->
+    <div class="content-section" id="section-analytics">
+      <!-- Quick Stats -->
+      <div class="health-grid" id="analyticsStats"></div>
+
+      <!-- Time Range Selector -->
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-clock"></i> Time Range</h2>
+          <button class="btn btn-sm btn-success" onclick="loadAnalytics()">
+            <i class="fas fa-sync"></i> Refresh
+          </button>
+        </div>
+        <div class="logs-controls">
+          <button class="btn btn-sm btn-secondary" onclick="setTimeRange('24h')">24 Hours</button>
+          <button class="btn btn-sm btn-secondary" onclick="setTimeRange('7d')">7 Days</button>
+          <button class="btn btn-sm btn-secondary" onclick="setTimeRange('30d')">30 Days</button>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- Actions by Type -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title"><i class="fas fa-chart-pie"></i> Actions by Type</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="actionsChart"></canvas>
+          </div>
+          <div id="actionsLegend" style="padding: 10px; font-size: 0.85rem;"></div>
+        </div>
+
+        <!-- Hourly Activity -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title"><i class="fas fa-chart-bar"></i> Activity Timeline</h2>
+          </div>
+          <div class="chart-container">
+            <canvas id="hourlyChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="analytics-grid">
+        <!-- Success Rate -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title"><i class="fas fa-check-circle"></i> Success Rate</h2>
+          </div>
+          <div style="text-align: center; padding: 20px;">
+            <div style="font-size: 4rem; font-weight: 700; color: var(--accent-green);" id="successRate">-</div>
+            <div style="color: var(--text-secondary); margin-top: 10px;">
+              <span id="totalActions">0</span> total actions | <span id="errorCount" style="color: var(--accent-red);">0</span> errors
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Processes -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title"><i class="fas fa-trophy"></i> Most Active Watchers</h2>
+          </div>
+          <div id="topWatchers" style="padding: 15px;"></div>
+        </div>
+      </div>
+
+      <!-- Recent Trends -->
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-chart-line"></i> Activity Trends (Last 7 Days)</h2>
+        </div>
+        <div class="chart-container" style="height: 200px;">
+          <canvas id="trendsChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Error Center (Combined with Analytics) -->
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-exclamation-triangle"></i> Error Center</h2>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-sm btn-secondary" onclick="filterErrors('all')">
+              <i class="fas fa-list"></i> All
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="filterErrors('critical')">
+              <i class="fas fa-fire"></i> Critical
+            </button>
+            <button class="btn btn-sm btn-warning" onclick="filterErrors('warning')">
+              <i class="fas fa-exclamation"></i> Warnings
+            </button>
+            <button class="btn btn-sm btn-success" onclick="filterErrors('resolved')">
+              <i class="fas fa-check"></i> Resolved
+            </button>
+          </div>
+        </div>
+
+        <!-- Error Stats -->
+        <div class="error-stats">
+          <div class="error-stat">
+            <div class="error-stat-value critical" id="criticalErrorCount">0</div>
+            <div class="error-stat-label">Critical</div>
+          </div>
+          <div class="error-stat">
+            <div class="error-stat-value warning" id="warningErrorCount">0</div>
+            <div class="error-stat-label">Warnings</div>
+          </div>
+          <div class="error-stat">
+            <div class="error-stat-value resolved" id="resolvedErrorCount">0</div>
+            <div class="error-stat-label">Resolved</div>
+          </div>
+        </div>
+
+        <div class="error-grid" id="errorGrid">
+          <!-- Error cards will be loaded here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Files Section -->
+    <div class="content-section" id="section-files">
+      <!-- Vault Stats -->
+      <div class="health-grid" id="vaultStats"></div>
+
+      <!-- Search and Filter -->
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-folder-open"></i> Vault Browser</h2>
+          <button class="btn btn-sm btn-success" onclick="loadFolders()">
+            <i class="fas fa-sync"></i> Refresh
+          </button>
+        </div>
+
+        <div class="logs-controls">
+          <input type="text" id="folderSearch" placeholder="Search folders..." onkeyup="filterFolders()" style="flex: 1;">
+          <select id="folderSort" onchange="sortFolders()">
+            <option value="name">Sort by Name</option>
+            <option value="count">Sort by File Count</option>
+          </select>
+        </div>
+
+        <div class="folder-grid" id="folderGrid"></div>
+      </div>
+
+      <!-- File Browser Modal -->
+      <div class="modal-overlay" id="fileBrowserModal" onclick="if(event.target === this) closeFileBrowser()">
+        <div class="modal-container" style="max-width: 900px;">
+          <div class="modal-header">
+            <h2 id="fileBrowserTitle">Folder Contents</h2>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-sm btn-secondary" onclick="refreshFileBrowser()">
+                <i class="fas fa-sync"></i> Refresh
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="closeFileBrowser()">
+                <i class="fas fa-times"></i> Close
+              </button>
+            </div>
+          </div>
+          <div class="logs-controls" style="margin: 15px 0;">
+            <input type="text" id="fileSearch" placeholder="Search files..." onkeyup="filterFilesInBrowser()" style="flex: 1;">
+            <select id="fileTypeFilter" onchange="filterFilesInBrowser()">
+              <option value="">All Types</option>
+              <option value="email">Emails</option>
+              <option value="linkedin_post">LinkedIn</option>
+              <option value="twitter_post">Twitter</option>
+              <option value="instagram_post">Instagram</option>
+              <option value="facebook_post">Facebook</option>
+              <option value="whatsapp_message">WhatsApp</option>
+              <option value="slack_message">Slack</option>
+              <option value="xero_alert">Xero</option>
+            </select>
+          </div>
+          <div id="fileBrowserContent" class="logs-container" style="max-height: 500px; background: var(--bg-tertiary);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="content-section" id="section-quick-actions">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-bolt"></i> Quick Actions</h2>
+          <span style="color: var(--text-secondary); font-size: 0.9rem;">One-click common tasks</span>
+        </div>
+
+        <div class="quick-actions-grid">
+          <div class="quick-action-btn" onclick="quickAction('sync-vault')">
+            <i class="fas fa-sync"></i>
+            <span class="quick-action-label">Sync Vault</span>
+          </div>
+          <div class="quick-action-btn success" onclick="quickAction('generate-briefing')">
+            <i class="fas fa-chart-line"></i>
+            <span class="quick-action-label">Generate Briefing</span>
+          </div>
+          <div class="quick-action-btn warning" onclick="quickAction('clear-logs')">
+            <i class="fas fa-broom"></i>
+            <span class="quick-action-label">Clear Old Logs</span>
+          </div>
+          <div class="quick-action-btn" onclick="quickAction('restart-watchers')">
+            <i class="fas fa-redo"></i>
+            <span class="quick-action-label">Restart Watchers</span>
+          </div>
+          <div class="quick-action-btn success" onclick="quickAction('check-email')">
+            <i class="fas fa-envelope"></i>
+            <span class="quick-action-label">Check Email</span>
+          </div>
+          <div class="quick-action-btn danger" onclick="quickAction('emergency-stop')">
+            <i class="fas fa-stop-circle"></i>
+            <span class="quick-action-label">Emergency Stop</span>
+          </div>
+          <div class="quick-action-btn" onclick="quickAction('system-status')">
+            <i class="fas fa-heartbeat"></i>
+            <span class="quick-action-label">System Status</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Social Media Queue Section -->
+    <div class="content-section" id="section-social-queue">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-share-alt"></i> Social Media Queue</h2>
+          <button class="btn btn-sm btn-success" onclick="loadSocialQueue()">
+            <i class="fas fa-sync"></i> Refresh
+          </button>
+        </div>
+
+        <div class="social-queue-grid" id="socialQueueGrid">
+          <!-- Queue cards will be loaded here -->
+        </div>
+
+        <div class="section">
+          <h3 style="font-size: 1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-list"></i> Pending Posts
+          </h3>
+          <div id="pendingPostsList" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Pending posts will be loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced Search Section -->
+    <div class="content-section" id="section-search">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-search"></i> Advanced Vault Search</h2>
+        </div>
+
+        <div class="search-container">
+          <input type="text" class="search-input" id="vaultSearchInput" placeholder="Search across all files in the vault..." onkeyup="if(event.key === 'Enter') performVaultSearch()">
+          <i class="fas fa-search search-icon"></i>
+        </div>
+
+        <div class="search-filters">
+          <div class="search-filter active" data-filter="all" onclick="setSearchFilter('all')">All Files</div>
+          <div class="search-filter" data-filter="pending" onclick="setSearchFilter('pending')">Pending</div>
+          <div class="search-filter" data-filter="approved" onclick="setSearchFilter('approved')">Approved</div>
+          <div class="search-filter" data-filter="done" onclick="setSearchFilter('done')">Done</div>
+          <div class="search-filter" data-filter="briefings" onclick="setSearchFilter('briefings')">Briefings</div>
+          <div class="search-filter" data-filter="logs" onclick="setSearchFilter('logs')">Logs</div>
+        </div>
+
+        <div class="search-results" id="searchResults">
+          <div class="empty-state">
+            <i class="fas fa-search"></i>
+            <p>Enter a search term to find files across the vault</p>
+            <p style="font-size: 0.8rem; margin-top: 10px;">Searches through file contents, metadata, and filenames</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Section -->
+    <div class="content-section" id="section-settings">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-cog"></i> Dashboard Settings</h2>
+          <button class="btn btn-sm btn-success" onclick="saveSettings()">
+            <i class="fas fa-save"></i> Save Settings
+          </button>
+        </div>
+
+        <!-- Appearance -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-palette"></i> Appearance
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-moon"></i> Theme
+              <div class="setting-description">Choose your preferred color scheme</div>
+            </div>
+            <div class="setting-control">
+              <div class="theme-selector">
+                <div class="theme-option active" data-theme="dark" onclick="setTheme('dark')">
+                  <i class="fas fa-moon"></i> Dark
+                </div>
+                <div class="theme-option" data-theme="light" onclick="setTheme('light')">
+                  <i class="fas fa-sun"></i> Light
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Refresh Intervals -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-sync"></i> Refresh Intervals
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-tachometer-alt"></i> Dashboard Refresh
+              <div class="setting-description">How often to update dashboard stats</div>
+            </div>
+            <div class="setting-control">
+              <select id="dashboardRefresh" class="search-filter">
+                <option value="10000">10 seconds</option>
+                <option value="30000">30 seconds</option>
+                <option value="60000">1 minute</option>
+                <option value="300000">5 minutes</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-chart-line"></i> Analytics Refresh
+              <div class="setting-description">How often to reload analytics data</div>
+            </div>
+            <div class="setting-control">
+              <select id="analyticsRefresh" class="search-filter">
+                <option value="30000">30 seconds</option>
+                <option value="60000">1 minute</option>
+                <option value="300000">5 minutes</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-bell"></i> Notifications
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-envelope"></i> Email Alerts
+              <div class="setting-description">Get notified for new pending approvals</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="emailNotifications" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-exclamation-triangle"></i> Error Alerts
+              <div class="setting-description">Get notified for system errors</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="errorNotifications" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-volume-up"></i> Sound Effects
+              <div class="setting-description">Play sounds for notifications</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="soundEffects">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- System -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-server"></i> System
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-database"></i> Clear Cache
+              <div class="setting-description">Clear browser cache and reload</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="clearCache()">
+                <i class="fas fa-broom"></i> Clear
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-download"></i> Export Settings
+              <div class="setting-description">Download your settings as JSON</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="exportSettings()">
+                <i class="fas fa-download"></i> Export
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Chat Section -->
+    <div class="content-section" id="section-ai-chat">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fas fa-robot"></i> AI Assistant Chat</h2>
+        </div>
+
+        <div class="chat-container">
+          <div class="chat-header">
+            <div class="chat-title">
+              <i class="fas fa-robot"></i> Claude AI Assistant
+            </div>
+            <div class="chat-status">Online</div>
+          </div>
+
+          <div class="chat-messages" id="chatMessages">
+            <!-- Welcome message -->
+            <div class="chat-message ai">
+              <div class="chat-avatar">
+                <i class="fas fa-robot"></i>
+              </div>
+              <div class="chat-bubble">
+                Hello! I'm your AI Employee assistant. I can help you with:
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                  <li>Analyzing vault contents and generating insights</li>
+                  <li>Creating action plans for business tasks</li>
+                  <li>Drafting responses to emails and messages</li>
+                  <li>Managing social media content</li>
+                  <li>Answering questions about your system</li>
+                </ul>
+                <p style="margin-top: 10px;">How can I help you today?</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-suggestions">
+            <div class="chat-suggestion" onclick="sendChatSuggestion('Generate a weekly briefing')">
+              Generate weekly briefing
+            </div>
+            <div class="chat-suggestion" onclick="sendChatSuggestion('What needs my attention?')">
+              What needs attention?
+            </div>
+            <div class="chat-suggestion" onclick="sendChatSuggestion('Review pending approvals')">
+              Review pending items
+            </div>
+            <div class="chat-suggestion" onclick="sendChatSuggestion('Check system health')">
+              Check system health
+            </div>
+          </div>
+
+          <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+              <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+              <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">
+                <i class="fas fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay" onclick="if(event.target === this) closeModal()">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 id="modalTitle">Item Details</h2>
+        <button class="btn btn-sm btn-danger" onclick="closeModal()">
+          <i class="fas fa-times"></i> Close
+        </button>
+      </div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script src="app.js?v=6.0"></script>
+</body>
+</html>
