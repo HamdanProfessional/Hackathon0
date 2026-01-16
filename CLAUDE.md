@@ -65,12 +65,12 @@ python -m py_compile scripts/monitors/email_approval_monitor.py
 
 ### Social Media Posting
 
-**Human-in-the-Loop Approval Workflow:**
+**AI-Assisted Approval Workflow:**
 
-**Step 1: Create Approval Request**
+**Step 1: Create Post in Needs_Action/ or Pending_Approval/**
 ```bash
-# Create social media post (creates file in Pending_Approval/)
-# Use Claude Code or manually create markdown files
+# Create social media post directly in Pending_Approval/
+# (AI Auto-Approver will detect and require manual review)
 
 # LinkedIn post
 cat > "AI_Employee_Vault/Pending_Approval/LINKEDIN_POST_$(date +%Y%m%d_%H%M%S).md" << 'EOF'
@@ -198,23 +198,29 @@ python .claude/agents/monitoring-agent/scripts/monitor.py --dashboard
 
 ## High-Level Architecture
 
-### Core Concept: Perception → Reasoning → Action
+### Core Concept: Perception → AI Reasoning → Human Review → Action
 
-The AI Employee system implements a **local-first, human-in-the-loop** autonomous agent architecture:
+The AI Employee system implements a **local-first, AI-powered, human-in-the-loop** autonomous agent architecture:
 
 1. **Perception (Watchers)** - Python scripts that monitor external services (Gmail, Calendar, Slack, Xero) and create markdown files in the vault when important events are detected
-2. **Reasoning (Claude Code)** - Analyzes markdown files, consults rules in `Company_Handbook.md`, generates plans, and creates approval requests
-3. **Human Approval** - Files in `Pending_Approval/` must be moved to `Approved/` by human before execution
+2. **AI Auto-Approver** - Claude 3 Haiku analyzes items in `Needs_Action/` and makes intelligent decisions:
+   - **approve** → Safe actions (file ops, Slack/WhatsApp, known contacts) → Moves to `Approved/`
+   - **reject** → Dangerous (scams, phishing, payment requests) → Moves to `Rejected/`
+   - **manual** → Needs human review (social media, payments, new contacts) → Moves to `Pending_Approval/`
+3. **Human Review** - Files in `Pending_Approval/` are reviewed by human and either moved to `Approved/` or `Rejected/`
 4. **Action (Monitors & MCPs)** - Approval monitors detect approved files and execute actions via browser automation (CDP) or MCP servers
+
+**AI Auto-Approver runs every 2 minutes** using Claude 3 Haiku API, dramatically reducing manual review while maintaining security.
 
 ### Key Architecture Components
 
 **Vault Structure (AI_Employee_Vault/)**
 - All data stored as markdown files in Obsidian vault
 - `Inbox/` - Drop zone for new items
-- `Needs_Action/` - Items requiring attention (created by watchers)
-- `Pending_Approval/` - Awaiting human review (created by Claude)
-- `Approved/` - Ready for execution (moved by human)
+- `Needs_Action/` - Items from watchers (pre-AI review)
+- `Pending_Approval/` - Awaiting human review (AI flagged as needing manual review)
+- `Approved/` - Ready for execution (AI-approved + human-approved items)
+- `Rejected/` - Declined items (AI-rejected + human-rejected)
 - `Done/` - Completed items
 - `Plans/` - AI-generated execution plans
 - `Briefings/` - CEO summaries and reports
@@ -313,7 +319,7 @@ def _log_audit_action(self, action_type: str, parameters: dict, result: str = "s
 ### Safety: DRY_RUN Mode
 
 All social media posters default to dry-run mode:
-- Environment variables control posting mode: `TWITTER_DRY_RUN=false`, `LINKEDIN_DRY_RUN=false`, `META_DRY_RUN=false`
+- Environment variables control posting mode: `TWITTER_DRY_RUN=false`, `LINKEDIN_DRY_RUN=false`, `FACEBOOK_DRY_RUN=false`, `INSTAGRAM_DRY_RUN=false`
 - PM2 config has these set to `"false"` for production
 - This prevents accidental posts during development/testing
 
@@ -322,7 +328,8 @@ All social media posters default to dry-run mode:
 # Set environment variables in PM2 config or shell
 export TWITTER_DRY_RUN=false
 export LINKEDIN_DRY_RUN=false
-export META_DRY_RUN=false
+export FACEBOOK_DRY_RUN=false
+export INSTAGRAM_DRY_RUN=false
 ```
 
 ### Chrome Automation (Social Media)
@@ -398,14 +405,25 @@ chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\Users\User\ChromeAut
 - PM2 config references wrapper scripts instead of watcher files directly
 
 **Process Modes:**
-- **Fork mode**: Default for watchers (isolated process)
-- **Cron jobs**: 5 scheduled tasks (daily-briefing at 7 AM daily, daily-review at 6 AM weekdays, social-media-scheduler Mon/Wed/Fri 8 AM, invoice-review Mondays 5 PM, audit-log-cleanup Sundays 3 AM)
+- **Fork mode**: Default for watchers and monitors (isolated process)
+- **Cron jobs**: 4 scheduled tasks (daily-briefing at 7 AM daily, daily-review at 6 AM weekdays, social-media-scheduler Mon/Wed/Fri 8 AM, audit-log-cleanup Sundays 3 AM)
 
 **Current PM2 Processes:**
-- 5 Watchers: gmail-watcher, calendar-watcher, slack-watcher, filesystem-watcher, whatsapp-watcher
-- 6 Approval Monitors: email-approval-monitor, calendar-approval-monitor, slack-approval-monitor, linkedin-approval-monitor, twitter-approval-monitor, meta-approval-monitor
-- 5 Cron Jobs: daily-briefing, daily-review, social-media-scheduler, invoice-review, audit-log-cleanup
-- **Total: 16 processes** (all operational, 0 crashes)
+- 6 Watchers: gmail-watcher, calendar-watcher, slack-watcher, odoo-watcher, filesystem-watcher, whatsapp-watcher
+- 6 Approval Monitors: email-approval-monitor, calendar-approval-monitor, slack-approval-monitor, linkedin-approval-monitor, twitter-approval-monitor, facebook-approval-monitor, instagram-approval-monitor
+- 1 AI Auto-Approver: auto-approver (runs every 2 minutes, uses Claude 3 Haiku)
+- 1 Dashboard: ai-employee-dashboard (Port 3000)
+- 1 Scheduler: social-media-scheduler (runs Mon/Wed/Fri 8AM)
+- 3 Cron Jobs: daily-briefing, daily-review, audit-log-cleanup
+- **Total: 19 processes** (all operational, 0 crashes)
+
+**NEW: AI Auto-Approver**
+- Runs continuously (checks every 2 minutes)
+- Uses Claude 3 Haiku for intelligent approval decisions
+- Auto-approves safe actions (file ops, Slack/WhatsApp, known contacts)
+- Auto-rejects dangerous actions (scams, phishing, payment requests)
+- Flags uncertain items for manual review (social media, payments, new contacts)
+- Requires `ANTHROPIC_API_KEY` environment variable
 
 ---
 
@@ -540,30 +558,24 @@ When making changes to the AI Employee system:
 
 ---
 
-*Updated: 2026-01-14*
-**SOCIAL MEDIA POSTING SYSTEM COMPLETE & OPTIMIZED**
+*Updated: 2026-01-17*
+**AI-POWERED AUTO-APPROVAL COMPLETE**
 *LinkedIn: ✅ Operational (fast copy-paste method - 100-200x faster)*
 *Twitter/X: ✅ Operational (fast copy-paste method - 100-200x faster)*
 *Instagram: ✅ Operational (6 professional color themes, decorative borders)*
 *Facebook: ✅ Operational (direct content insertion with blur event handling)*
+*AI Auto-Approver: ✅ NEW - Claude 3 Haiku makes intelligent approval decisions*
 *All approval monitors in LIVE mode*
-*16 PM2 processes running (0 crashes)*
-*100% Gold Tier Complete*
+*19 PM2 processes running (0 crashes)*
+*100% Platinum Tier Complete (AI + Human-in-the-Loop)*
 
-**Recent Improvements (v1.1.1):**
-- ✨ **Ralph Wiggum autonomous task execution** - Monday Morning CEO Briefing (7 tasks, 3-6x faster than manual)
-- 📚 **Complete documentation suite** - Process control guide, Ralph user guide, Social media guide
-- 🎯 **Presentation materials** - Executive summary, presentation script, slide outlines, Q&A prep
-- 🎨 **6 professional Instagram themes** - Midnight Purple, Ocean Blue, Sunset Orange, Forest Green, Royal Gold, Deep Navy
-- ⚡ **Fast copy-paste method** for LinkedIn & Twitter (100-200x speed improvement)
-- 🔧 **Vault structure fix** - Removed nested AI_Employee_Vault/AI_Employee_Vault/ duplication
-- 📝 **Complete changelog** - v1.1.1 with all improvements documented
-- 🚀 **All 16 PM2 processes running** - 11 continuous, 5 scheduled
-
-**New Documentation Files (v1.1.1):**
-- `docs/PROCESS_CONTROL_GUIDE.md` - PM2 process management guide
-- `docs/RALPH_USER_GUIDE.md` - Ralph autonomous task execution user guide
-- `AI_Employee_Vault/Briefings/EXECUTIVE_SUMMARY_2026-01-14.md` - Business summary for stakeholders
-- `AI_Employee_Vault/Briefings/PRESENTATION_SCRIPT_2026-01-14.md` - Full presentation script (15-20 min)
-- `AI_Employee_Vault/Briefings/PRESENTATION_SLIDES_2026-01-14.md` - Slide outlines with timing
-- `.claude/skills/ralph/prd_monday_ceo_briefing.json` - Monday CEO Briefing task list (7 tasks)
+**Recent Improvements (v1.3.0):**
+- ✨ **AI-Powered Auto-Approver** - Claude 3 Haiku integration for intelligent decisions
+- 🧠 **Smart Approval Logic** - Auto-approves safe actions, rejects scams, flags for review
+- 🔄 **Continuous Processing** - Checks every 2 minutes instead of manual review
+- 📊 **Odoo Integration** - Local-first accounting with XML-RPC
+- 🎨 **6 Professional Instagram Themes** - Midnight Purple, Ocean Blue, Sunset Orange, Forest Green, Royal Gold, Deep Navy
+- ⚡ **Fast Copy-Paste Method** for LinkedIn & Twitter (100-200x speed improvement)
+- 🔧 **Vault Structure Fix** - Removed nested AI_Employee_Vault/AI_Employee_Vault/ duplication
+- 📝 **Complete changelog** - v1.3.0 with all improvements documented
+- 🚀 **All 19 PM2 processes running** - 15 continuous, 4 scheduled

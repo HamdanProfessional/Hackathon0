@@ -1,3 +1,9 @@
+---
+name: mcp-builder
+description: Templates for generating MCP server code and configurations
+license: MIT
+---
+
 # MCP Builder Templates
 
 ---

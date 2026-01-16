@@ -119,11 +119,11 @@ class EmailApprovalMonitor(BaseWatcher):
         return f"email_{filepath.stat().st_mtime}_{filepath.stem}"
 
     # BaseWatcher abstract methods (approval monitors don't use these)
-    def get_item_id(self, item_data: dict) -> str:
+    def get_item_id(self, item) -> str:
         """Generate unique ID for item (not used by approval monitors)."""
         return f"email_{datetime.now().timestamp()}"
 
-    def create_action_file(self, item_data: dict, content: str):
+    def create_action_file(self, item):
         """Create action file (not used by approval monitors - they only process)."""
         pass
 

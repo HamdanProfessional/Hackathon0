@@ -1,3 +1,9 @@
+---
+name: watcher-builder
+description: Complete examples demonstrating how to use the Watcher Builder skill
+license: MIT
+---
+
 # Watcher Builder Examples
 
 Complete examples demonstrating how to use the Watcher Builder skill.

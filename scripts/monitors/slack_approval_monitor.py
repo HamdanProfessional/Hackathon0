@@ -18,17 +18,15 @@ import os
 import re
 from pathlib import Path
 from datetime import datetime
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
 load_dotenv()
 
 
-class SlackApprovalHandler(FileSystemEventHandler):
+class SlackApprovalMonitor:
     """
-    Handles approved Slack action files.
+    Monitors the Approved/ folder for Slack messages using polling.
     """
 
     def __init__(self, vault_path: str, dry_run: bool = False):
@@ -37,6 +35,8 @@ class SlackApprovalHandler(FileSystemEventHandler):
         self.done_folder = self.vault_path / "Done"
         self.logs_folder = self.vault_path / "Logs"
         self.dry_run = dry_run
+        self._is_running = False
+        self.processed_files = set()
 
         # Get Slack bot token from environment
         self.slack_token = os.environ.get('SLACK_BOT_TOKEN')
@@ -47,22 +47,30 @@ class SlackApprovalHandler(FileSystemEventHandler):
         self.done_folder.mkdir(parents=True, exist_ok=True)
         self.logs_folder.mkdir(parents=True, exist_ok=True)
 
-    def on_created(self, event):
-        """Called when a file is created in /Approved/ folder."""
-        if event.is_directory:
-            return
+    def check_for_updates(self) -> list:
+        """Check for newly approved Slack messages."""
+        updates = []
 
-        filepath = Path(event.src_path)
+        if not self._is_running:
+            return updates
 
-        # Only process Slack approval files
-        if not filepath.name.startswith(("SLACK_", "SLACK_MESSAGE_")):
-            return
+        # Get list of markdown files in Approved/
+        patterns = ["SLACK_", "SLACK_MESSAGE_"]
+        files = []
+        for pattern in patterns:
+            files.extend(self.approved_folder.glob(f"{pattern}*.md"))
 
-        if not filepath.suffix == ".md":
-            return
+        for filepath in files:
+            # Skip files we've already processed
+            if str(filepath) in self.processed_files:
+                continue
 
-        print(f"\n[OK] Detected approved Slack message: {filepath.name}")
-        self.process_approved_slack_message(filepath)
+            print(f"\n[OK] Detected approved Slack message: {filepath.name}")
+            self.process_approved_slack_message(filepath)
+            self.processed_files.add(str(filepath))
+            updates.append(filepath)
+
+        return updates
 
     def process_approved_slack_message(self, filepath: Path):
         """
@@ -237,6 +245,30 @@ class SlackApprovalHandler(FileSystemEventHandler):
         except Exception as e:
             print(f"[ERROR] Could not write to log: {e}")
 
+    def run(self):
+        """Main loop for continuous operation with 30-second polling."""
+        try:
+            self._is_running = True
+
+            while self._is_running:
+                time.sleep(30)  # Check every 30 seconds
+
+                try:
+                    updates = self.check_for_updates()
+
+                    if updates:
+                        print(f"\n[INFO] Processing {len(updates)} approved message(s)...")
+                    else:
+                        print("[INFO] Waiting for approved Slack messages...")
+
+                except Exception as e:
+                    print(f"[ERROR] Error in main loop: {e}")
+
+        except KeyboardInterrupt:
+            print("\n\n[INFO] Stopping Slack approval monitor...")
+            self._is_running = False
+            print("[OK] Monitor stopped")
+
 
 def main():
     """Main entry point."""
@@ -262,31 +294,25 @@ def main():
     approved_folder = vault_path / "Approved"
     approved_folder.mkdir(parents=True, exist_ok=True)
 
+    # Create monitor
+    monitor = SlackApprovalMonitor(args.vault, args.dry_run)
+
     print("=" * 60)
     print("Slack Approval Monitor")
     print("=" * 60)
     print(f"Vault: {vault_path}")
     print(f"Watching: {approved_folder}")
     print(f"Mode: {'DRY RUN' if args.dry_run else 'LIVE'}")
+    print("Polling interval: 30 seconds")
     print("=" * 60)
     print("\n[INFO] Waiting for approved Slack messages...")
     print("[INFO] Press Ctrl+C to stop\n")
 
-    event_handler = SlackApprovalHandler(args.vault, args.dry_run)
-    observer = Observer()
-    observer.schedule(event_handler, str(approved_folder), recursive=False)
-    observer.start()
-
+    # Run continuous polling
     try:
-        while True:
-            time.sleep(1)
+        monitor.run()
     except KeyboardInterrupt:
-        print("\n\n[INFO] Stopping monitor...")
-        if observer.is_alive():
-            observer.stop()
-        observer.join()
-
-    print("[OK] Monitor stopped")
+        print("\n[OK] Monitor stopped")
 
 
 if __name__ == "__main__":

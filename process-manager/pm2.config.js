@@ -2,16 +2,21 @@
  * PM2 Configuration
  *
  * Process Manager 2 configuration for running all AI Employee processes.
- * All paths are relative to process-manager/ directory.
+ * Using absolute paths to ensure reliable execution.
  */
+
+const path = require('path');
+
+// Project root directory - all paths are absolute to ensure reliability
+const PROJECT_ROOT = path.join('C:', 'Users', 'User', 'Desktop', 'AI_EMPLOYEE_APP');
 
 module.exports = {
   "apps": [
     // ==================== WATCHERS ====================
     {
       name: "gmail-watcher",
-      script: "../scripts/run_gmail_watcher.py",
-      args: "--vault ../AI_Employee_Vault --credentials ../mcp-servers/email-mcp/credentials.json",
+      script: path.join(PROJECT_ROOT, "scripts", "run_gmail_watcher.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault") + " --credentials " + path.join(PROJECT_ROOT, "mcp-servers", "email-mcp", "credentials.json"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -26,8 +31,8 @@ module.exports = {
 
     {
       name: "calendar-watcher",
-      script: "../scripts/run_calendar_watcher.py",
-      args: "--vault ../AI_Employee_Vault --credentials ../mcp-servers/calendar-mcp/credentials.json",
+      script: path.join(PROJECT_ROOT, "scripts", "run_calendar_watcher.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault") + " --credentials " + path.join(PROJECT_ROOT, "mcp-servers", "calendar-mcp", "credentials.json"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -42,8 +47,8 @@ module.exports = {
 
     {
       name: "slack-watcher",
-      script: "../scripts/run_slack_watcher.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "run_slack_watcher.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -58,8 +63,8 @@ module.exports = {
 
     {
       name: "odoo-watcher",
-      script: "../scripts/run_odoo_watcher.py",
-      args: "--vault ../AI_Employee_Vault --interval 300",
+      script: path.join(PROJECT_ROOT, "scripts", "run_odoo_watcher.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault") + " --interval 300",
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -76,8 +81,8 @@ module.exports = {
 
     {
       name: "filesystem-watcher",
-      script: "../scripts/run_filesystem_watcher.py",
-      args: "--vault ../AI_Employee_Vault --watch-folder Inbox",
+      script: path.join(PROJECT_ROOT, "scripts", "run_filesystem_watcher.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault") + " --watch-folder Inbox",
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -92,8 +97,8 @@ module.exports = {
 
     {
       name: "whatsapp-watcher",
-      script: "../scripts/run_whatsapp_watcher.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "run_whatsapp_watcher.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -109,8 +114,8 @@ module.exports = {
     // ==================== APPROVAL MONITORS ====================
     {
       name: "email-approval-monitor",
-      script: "../scripts/monitors/email_approval_monitor.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "monitors", "email_approval_monitor.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -125,8 +130,8 @@ module.exports = {
 
     {
       name: "calendar-approval-monitor",
-      script: "../scripts/monitors/calendar_approval_monitor.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "monitors", "calendar_approval_monitor.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -141,8 +146,8 @@ module.exports = {
 
     {
       name: "slack-approval-monitor",
-      script: "../scripts/monitors/slack_approval_monitor.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "monitors", "slack_approval_monitor.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -157,8 +162,8 @@ module.exports = {
 
     {
       name: "linkedin-approval-monitor",
-      script: "../scripts/social-media/linkedin_approval_monitor.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "social-media", "linkedin_approval_monitor.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -174,8 +179,8 @@ module.exports = {
 
     {
       name: "twitter-approval-monitor",
-      script: "../scripts/social-media/twitter_approval_monitor.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "social-media", "twitter_approval_monitor.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -191,8 +196,8 @@ module.exports = {
 
     {
       name: "facebook-approval-monitor",
-      script: "../scripts/social-media/facebook-approval-monitor.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "social-media", "facebook-approval-monitor.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -202,14 +207,14 @@ module.exports = {
       env: {
         "PYTHONUNBUFFERED": "1",
         "PYTHONIOENCODING": "utf-8",
-        "META_DRY_RUN": "false"
+        "FACEBOOK_DRY_RUN": "false"
       }
     },
 
     {
       name: "instagram-approval-monitor",
-      script: "../scripts/social-media/instagram-approval-monitor.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, "scripts", "social-media", "instagram-approval-monitor.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,
@@ -219,15 +224,33 @@ module.exports = {
       env: {
         "PYTHONUNBUFFERED": "1",
         "PYTHONIOENCODING": "utf-8",
-        "META_DRY_RUN": "false"
+        "INSTAGRAM_DRY_RUN": "false"
+      }
+    },
+
+    // ==================== AUTO-APPROVER ====================
+    {
+      name: "auto-approver",
+      script: path.join(PROJECT_ROOT, "scripts", "auto_approver.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
+      interpreter: "python",
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      max_restarts: 10,
+      max_memory_restart: "500M",
+      env: {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "ANTHROPIC_API_KEY": process.env.ANTHROPIC_API_KEY || ""
       }
     },
 
     // ==================== CRON JOBS ====================
     {
       name: "monday-ceo-briefing",
-      script: "../.claude/skills/weekly-briefing/scripts/generate_ceo_briefing.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, ".claude", "skills", "weekly-briefing", "scripts", "generate_ceo_briefing.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: false,
@@ -242,8 +265,8 @@ module.exports = {
 
     {
       name: "daily-review",
-      script: "../.claude/skills/daily-review/scripts/generate_daily_plan.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, ".claude", "skills", "daily-review", "scripts", "generate_daily_plan.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: false,
@@ -258,8 +281,8 @@ module.exports = {
 
     {
       name: "social-media-scheduler",
-      script: "../.claude/skills/social-media-manager/scripts/generate_linkedin_ai.py",
-      args: "--vault ../AI_Employee_Vault",
+      script: path.join(PROJECT_ROOT, ".claude", "skills", "social-media-manager", "scripts", "generate_linkedin_ai.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: false,
@@ -274,8 +297,8 @@ module.exports = {
 
     {
       name: "audit-log-cleanup",
-      script: "../scripts/cleanup_old_logs.py",
-      args: "--vault ../AI_Employee_Vault --days 90",
+      script: path.join(PROJECT_ROOT, "scripts", "cleanup_old_logs.py"),
+      args: "--vault " + path.join(PROJECT_ROOT, "AI_Employee_Vault") + " --days 90",
       interpreter: "python",
       exec_mode: "fork",
       autorestart: false,
@@ -291,7 +314,7 @@ module.exports = {
     // ==================== DASHBOARD ====================
     {
       name: "ai-employee-dashboard",
-      script: "../dashboard/server.js",
+      script: path.join(PROJECT_ROOT, "dashboard", "server.js"),
       exec_mode: "fork",
       autorestart: true,
       watch: false,

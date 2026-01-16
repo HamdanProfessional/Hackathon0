@@ -16,6 +16,10 @@ Note:
 import argparse
 import os
 import sys
+import socket
+import platform
+import time
+import random
 from pathlib import Path
 from datetime import datetime
 
@@ -70,6 +74,115 @@ POST_BUTTON_ALTS = [
 # Reply-specific selector
 REPLY_BUTTON_SELECTOR = 'div[role="button"][data-testid="reply"]'
 QUOTE_BUTTON_SELECTOR = 'div[role="button"][data-testid="quote"]'
+
+
+# ==================== CHROME CDP HELPER ====================
+
+def ensure_chrome_cdp_running():
+    """
+    Check if Chrome CDP is running on port 9222. If not, automatically start it.
+    This preserves your existing Chrome session with logins.
+    """
+    import subprocess
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    result = sock.connect_ex(('localhost', 9222))
+    sock.close()
+
+    if result == 0:
+        print("[OK] Chrome CDP detected on port 9222 - using existing session")
+        return
+
+    print("[INFO] Chrome CDP not available - auto-starting...")
+    system = platform.system()
+
+    if system == "Windows":
+        # Use subprocess to start Chrome in background
+        chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+        profile_dir = r"C:\Users\User\ChromeAutomationProfile"
+
+        command = [
+            chrome_path,
+            "--remote-debugging-port=9222",
+            f"--user-data-dir={profile_dir}",
+            f"--profile-directory={profile_dir}",
+            "--start-maximized",
+            "about:blank"
+        ]
+
+        print(f"[INFO] Starting Chrome CDP: {chrome_path}")
+
+        try:
+            process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW)
+            print("[OK] Chrome CDP started (PID: " + str(process.pid) + ")")
+            print("[INFO] Chrome automation window should open in background")
+            print("[INFO] This Chrome is separate from your main Chrome profile")
+
+            # Wait for Chrome to start
+            time.sleep(3)
+
+            # Check if it started successfully
+            sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock2.settimeout(2)
+            result2 = sock2.connect_ex(('localhost', 9222))
+            sock2.close()
+
+            if result2 == 0:
+                print("[OK] Chrome CDP is ready!")
+                return
+            else:
+                raise Exception("Chrome CDP failed to start")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to start Chrome CDP: {e}")
+            print("\n[INFO] Please manually start Chrome with:")
+            print("[INFO]   START_AUTOMATION_CHROME.bat")
+            raise Exception("Chrome CDP not available")
+
+    elif system == "Darwin":  # macOS
+        # Use subprocess to start Chrome in background
+        chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        command = [
+            chrome_path,
+            "--remote-debugging-port=9222",
+            "--profile-directory=~/Library/Application Support/Google/Chrome"
+        ]
+
+        try:
+            process = subprocess.Popen(command)
+            print("[OK] Chrome CDP started (PID: " + str(process.pid) + ")")
+            time.sleep(5)
+
+            # Check if it started
+            if sock.connect_ex(('localhost', 9222)) == 0:
+                print("[OK] Chrome CDP is ready!")
+                return
+            else:
+                raise Exception("Chrome CDP failed to start")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to start Chrome CDP: {e}")
+            print("\n[INFO] Please manually start Chrome with:")
+            print("[INFO]   /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222")
+            raise Exception("Chrome CDP not available")
+
+    else:  # Linux
+        command = ["google-chrome", "--remote-debugging-port=9222"]
+
+        try:
+            process = subprocess.Popen(command)
+            print("[OK] Chrome CDP started (PID: " + str(process.pid) + ")")
+            time.sleep(5)
+
+            if sock.connect_ex(('localhost', 9222)) == 0:
+                print("[OK] Chrome CDP is ready!")
+                return
+            else:
+                raise Exception("Chrome CDP failed to start")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to start Chrome CDP: {e}")
+            raise Exception("Chrome CDP not available")
 
 
 def post_tweet(page, tweet_content, reply_to=None):
@@ -245,12 +358,18 @@ def main():
 
     with sync_playwright() as p:
         try:
-            # Connect to existing Chrome instance via CDP
-            print("🔌 Connecting to Chrome CDP session...")
-            print(f"   Make sure Chrome is running with --remote-debugging-port=9222\n")
+            # Check Chrome CDP is available
+            ensure_chrome_cdp_running()
 
-            browser = p.chromium.connect_over_cdp(CDP_ENDPOINT)
-            print("✅ Connected to existing Chrome session!")
+            # Connect to existing Chrome instance via CDP
+            print("[INFO] Connecting to Chrome CDP session...")
+
+            try:
+                browser = p.chromium.connect_over_cdp(CDP_ENDPOINT)
+                print("[OK] Connected to existing Chrome session!")
+            except Exception as e:
+                print(f"[ERROR] Could not connect to Chrome CDP: {e}")
+                raise
 
             # Get the default context and page
             default_context = browser.contexts[0]

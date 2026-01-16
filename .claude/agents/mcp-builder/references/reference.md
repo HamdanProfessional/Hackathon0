@@ -1,3 +1,9 @@
+---
+name: mcp-builder
+description: Reference documentation for building MCP (Model Context Protocol) servers
+license: MIT
+---
+
 # MCP Builder Reference
 
 ---

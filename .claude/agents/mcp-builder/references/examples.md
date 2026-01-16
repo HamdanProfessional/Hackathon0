@@ -1,3 +1,9 @@
+---
+name: mcp-builder
+description: Examples demonstrating MCP server generation and usage
+license: MIT
+---
+
 # MCP Builder Examples
 
 ---

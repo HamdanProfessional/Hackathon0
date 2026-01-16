@@ -17,13 +17,11 @@ import json
 import re
 from pathlib import Path
 from datetime import datetime
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 
-class CalendarApprovalHandler(FileSystemEventHandler):
+class CalendarApprovalMonitor:
     """
-    Handles approved calendar action files.
+    Monitors the Approved/ folder for calendar actions using polling.
     """
 
     def __init__(self, vault_path: str, dry_run: bool = False):
@@ -32,27 +30,37 @@ class CalendarApprovalHandler(FileSystemEventHandler):
         self.done_folder = self.vault_path / "Done"
         self.logs_folder = self.vault_path / "Logs"
         self.dry_run = dry_run
+        self._is_running = False
+        self.processed_files = set()
 
         # Ensure folders exist
         self.done_folder.mkdir(parents=True, exist_ok=True)
         self.logs_folder.mkdir(parents=True, exist_ok=True)
 
-    def on_created(self, event):
-        """Called when a file is created in /Approved/ folder."""
-        if event.is_directory:
-            return
+    def check_for_updates(self) -> list:
+        """Check for newly approved calendar actions."""
+        updates = []
 
-        filepath = Path(event.src_path)
+        if not self._is_running:
+            return updates
 
-        # Only process calendar approval files
-        if not filepath.name.startswith(("CALENDAR_", "EVENT_", "MEETING_")):
-            return
+        # Get list of markdown files in Approved/
+        patterns = ["CALENDAR_", "EVENT_", "MEETING_"]
+        files = []
+        for pattern in patterns:
+            files.extend(self.approved_folder.glob(f"{pattern}*.md"))
 
-        if not filepath.suffix == ".md":
-            return
+        for filepath in files:
+            # Skip files we've already processed
+            if str(filepath) in self.processed_files:
+                continue
 
-        print(f"\n[OK] Detected approved calendar action: {filepath.name}")
-        self.process_approved_calendar_action(filepath)
+            print(f"\n[OK] Detected approved calendar action: {filepath.name}")
+            self.process_approved_calendar_action(filepath)
+            self.processed_files.add(str(filepath))
+            updates.append(filepath)
+
+        return updates
 
     def process_approved_calendar_action(self, filepath: Path):
         """
@@ -241,6 +249,30 @@ class CalendarApprovalHandler(FileSystemEventHandler):
         except Exception as e:
             print(f"[ERROR] Could not write to log: {e}")
 
+    def run(self):
+        """Main loop for continuous operation with 30-second polling."""
+        try:
+            self._is_running = True
+
+            while self._is_running:
+                time.sleep(30)  # Check every 30 seconds
+
+                try:
+                    updates = self.check_for_updates()
+
+                    if updates:
+                        print(f"\n[INFO] Processing {len(updates)} approved action(s)...")
+                    else:
+                        print("[INFO] Waiting for approved calendar actions...")
+
+                except Exception as e:
+                    print(f"[ERROR] Error in main loop: {e}")
+
+        except KeyboardInterrupt:
+            print("\n\n[INFO] Stopping calendar approval monitor...")
+            self._is_running = False
+            print("[OK] Monitor stopped")
+
 
 def main():
     """Main entry point."""
@@ -266,31 +298,25 @@ def main():
     approved_folder = vault_path / "Approved"
     approved_folder.mkdir(parents=True, exist_ok=True)
 
+    # Create monitor
+    monitor = CalendarApprovalMonitor(args.vault, args.dry_run)
+
     print("=" * 60)
     print("Calendar Approval Monitor")
     print("=" * 60)
     print(f"Vault: {vault_path}")
     print(f"Watching: {approved_folder}")
     print(f"Mode: {'DRY RUN' if args.dry_run else 'LIVE'}")
+    print("Polling interval: 30 seconds")
     print("=" * 60)
     print("\n[INFO] Waiting for approved calendar actions...")
     print("[INFO] Press Ctrl+C to stop\n")
 
-    event_handler = CalendarApprovalHandler(args.vault, args.dry_run)
-    observer = Observer()
-    observer.schedule(event_handler, str(approved_folder), recursive=False)
-    observer.start()
-
+    # Run continuous polling
     try:
-        while True:
-            time.sleep(1)
+        monitor.run()
     except KeyboardInterrupt:
-        print("\n\n[INFO] Stopping monitor...")
-        if observer.is_alive():
-            observer.stop()
-        observer.join()
-
-    print("[OK] Monitor stopped")
+        print("\n[OK] Monitor stopped")
 
 
 if __name__ == "__main__":

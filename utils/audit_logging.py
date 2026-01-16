@@ -84,13 +84,13 @@ class AuditLogger:
             details: Dictionary of action details
             approval_status: Optional approval status
             result: Optional result description
-            - confidence: Confidence level (high/medium/low)
+            confidence: Confidence level (high/medium/low)
             actor: Who/what performed the action
         """
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "component": component,
-            "action_type": EventType.ACTION.value,
+            "event_type": EventType.ACTION.value,
             "actor": actor,
             "action_type": action_type,
             "details": details,
@@ -129,7 +129,7 @@ class AuditLogger:
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "component": component,
-            "action_type": EventType.SECURITY.value,
+            "event_type": EventType.SECURITY.value,
             "actor": user or "system",
             "action_type": event_type,
             "details": {
@@ -162,7 +162,7 @@ class AuditLogger:
         log_entry = {
             "timestamp": datetime.now().isoformat(),
             "component": component,
-            "action_type": EventType.PERFORMANCE.value,
+            "event_type": EventType.PERFORMANCE.value,
             "actor": "system",
             "action_type": metric_name,
             "details": {

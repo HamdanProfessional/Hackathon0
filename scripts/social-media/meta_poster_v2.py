@@ -60,9 +60,9 @@ except ImportError:
 
 # DRY_RUN: Set to False to actually publish posts
 # Can be overridden via:
-# 1. Environment variable: export META_DRY_RUN=false
+# 1. Environment variable: export INSTAGRAM_DRY_RUN=false
 # 2. Command-line flag: --live or --dry-run
-DRY_RUN = os.getenv('META_DRY_RUN', 'true').lower() == 'true'
+DRY_RUN = os.getenv('INSTAGRAM_DRY_RUN', 'true').lower() == 'true'
 
 META_BUSINESS_SUITE_URL = "https://business.facebook.com/latest/composer"
 INSTAGRAM_DIRECT_URL = "https://www.instagram.com/"  # Direct Instagram

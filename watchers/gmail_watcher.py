@@ -24,6 +24,7 @@ from googleapiclient.errors import HttpError
 
 from .base_watcher import BaseWatcher
 from .error_recovery import with_retry, ErrorCategory
+from .deduplication import Deduplication
 
 
 # Gmail API scopes
@@ -71,6 +72,15 @@ class GmailWatcher(BaseWatcher):
         self.credentials_path = credentials_path
         self.token_path = token_path or str(Path(vault_path) / ".gmail_token.json")
         self.service = None
+
+        # Use persistent deduplication for emails
+        self.dedup = Deduplication(
+            vault_path=vault_path,
+            state_file=".gmail_state.json",
+            item_prefix="GMAIL",
+            scan_folders=True
+        )
+
         self._authenticate()
 
     def _authenticate(self) -> None:
@@ -206,37 +216,24 @@ class GmailWatcher(BaseWatcher):
             item: Message dictionary from check_for_updates()
 
         Returns:
-            Path to created file
+            Path to created file, or None if already processed
         """
-        # Check if action file already exists for this message ID
+        # Check if already processed using persistent deduplication
         message_id = item['id']
+        if self.dedup.is_processed(message_id):
+            self.logger.info(f"Email {message_id} already processed, skipping")
+            return None
+
+        # Mark as processed immediately to prevent race conditions
+        self.dedup.mark_processed(message_id)
+
         message_thread_id = item.get('threadId', 'unknown')
-
-        # List of existing files in Needs_Action
-        existing_files = list(self.needs_action.glob("EMAIL_*.md"))
-
-        for existing_file in existing_files:
-            # Extract message ID from filename
-            existing_message_id = None
-            try:
-                content = existing_file.read_text(encoding='utf-8')
-                # Extract message_id from frontmatter (more precise regex)
-                import re
-                match = re.search(r'message_id:\s*(\S+)', content)
-                if match:
-                    existing_message_id = match.group(1)
-            except Exception as e:
-                self.logger.debug(f"Could not read existing file: {existing_file.name}: {e}")
-
-            # If this message ID already has an action file, skip creating duplicate
-            if existing_message_id == message_id:
-                self.logger.info(f"Email {message_id} already has action file: {existing_file.name}")
-                return None  # Don't create duplicate
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_subject = self._sanitize_filename(item["subject"][:50])
         filename = f"EMAIL_{timestamp}_{safe_subject}.md"
         filepath = self.needs_action / filename
+
         # Get priority based on urgency
         priority = "!!! HIGH" if item["urgency"] == "high" else "normal"
 
@@ -396,7 +393,12 @@ def main():
         items = watcher.run_once()
         print(f"Found {len(items)} new items")
         for item in items:
-            print(f"  - {item['subject']}")
+            # Safely print subject, handling encoding errors
+            try:
+                subject = item['subject']
+                print(f"  - {subject}")
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                print(f"  - [Subject contains special characters]")
     else:
         watcher.run()
 

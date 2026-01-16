@@ -10,6 +10,7 @@ Setup:
 """
 
 import os
+import time
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
@@ -23,6 +24,7 @@ from googleapiclient.errors import HttpError
 
 from .base_watcher import BaseWatcher
 from .error_recovery import with_retry, ErrorCategory
+from .deduplication import Deduplication
 
 
 # Calendar API scopes (includes Gmail for shared auth)
@@ -76,7 +78,15 @@ class CalendarWatcher(BaseWatcher):
         self.calendar_id = calendar_id
         self.look_ahead_hours = look_ahead_hours
         self.service = None
-        self.processed_events = set()
+
+        # Use persistent deduplication instead of in-memory set
+        self.dedup = Deduplication(
+            vault_path=vault_path,
+            state_file=".calendar_state.json",
+            item_prefix="CAL",
+            scan_folders=True
+        )
+
         self._authenticate()
 
     def _authenticate(self) -> None:
@@ -117,15 +127,15 @@ class CalendarWatcher(BaseWatcher):
             List of event dictionaries
         """
         try:
-            # Calculate time range
-            now = datetime.utcnow()
+            # Calculate time range (using timezone-aware datetime)
+            now = datetime.now(timezone.utc)
             time_max = now + timedelta(hours=self.look_ahead_hours)
 
             # Fetch events
             events_result = self.service.events().list(
                 calendarId=self.calendar_id,
-                timeMin=now.isoformat() + "Z",
-                timeMax=time_max.isoformat() + "Z",
+                timeMin=now.isoformat(),
+                timeMax=time_max.isoformat(),
                 singleEvents=True,
                 orderBy="startTime",
             ).execute()
@@ -133,11 +143,14 @@ class CalendarWatcher(BaseWatcher):
             events = events_result.get("items", [])
             self.logger.info(f"Found {len(events)} upcoming events")
 
-            # Filter out already processed events
-            new_events = [
-                e for e in events
-                if e.get("id") not in self.processed_events
-            ]
+            # Filter out already processed events using persistent deduplication
+            new_events = []
+            for e in events:
+                event_id = e.get("id")
+                if not self.dedup.is_processed(event_id):
+                    new_events.append(e)
+                    # Mark as processed immediately to prevent duplicates
+                    self.dedup.mark_processed(event_id)
 
             # Log to audit
             self._log_audit_action("calendar_check", {
@@ -298,8 +311,8 @@ created: {datetime.now().isoformat()}
             for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d"):
                 try:
                     event_dt = datetime.strptime(event_time, fmt)
-                    # Assume parsed time is in local timezone, convert to UTC for comparison
-                    event_dt = event_dt.replace(tzinfo=None)  # Naive datetime
+                    # Assume parsed time is in local timezone, make it aware
+                    event_dt = event_dt.replace(tzinfo=timezone.utc)
                     break
                 except ValueError:
                     continue
@@ -307,8 +320,8 @@ created: {datetime.now().isoformat()}
             if not event_dt:
                 return None
 
-            # Use UTC now for consistent comparison
-            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            # Use UTC now for consistent comparison (both are timezone-aware)
+            now = datetime.now(timezone.utc)
             delta = event_dt - now
 
             if delta.total_seconds() <= 0:

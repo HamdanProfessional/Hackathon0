@@ -18,12 +18,13 @@ This is a **critical security component** of the AI Employee system - no sensiti
 
 ### Core Principles
 
-1. **No Auto-Approval**: Sensitive actions always require human review
-2. **Traceability**: Every approval decision is logged with timestamp
-3. **Time-Aware**: Escalate overdue items automatically
-4. **Risk-Based**: Approval requirements match action risk level
-5. **Transparent**: Clear status tracking for all items
-6. **Audit-First**: Complete audit trail for compliance
+1. **Smart Auto-Approval**: AI-powered approval decisions for safe actions
+2. **Human-in-the-Loop**: Sensitive actions always require human review
+3. **Traceability**: Every approval decision is logged with timestamp
+4. **Time-Aware**: Escalate overdue items automatically
+5. **Risk-Based**: Approval requirements match action risk level
+6. **Transparent**: Clear status tracking for all items
+7. **Audit-First**: Complete audit trail for compliance
 
 ### Architecture
 
@@ -32,29 +33,132 @@ External System (Gmail/LinkedIn/Xero/etc)
       ↓
 Watcher Detects Event
       ↓
-Creates Approval Request
+Creates Action File in Needs_Action/
       ↓
-Pending_Approval/ Folder
+AI Auto-Approver Analyzes (runs every 2 min)
       ↓
-Human Reviews
+┌─────────────────────────────────────────┐
+│ Claude 3 Haiku AI Decision:             │
+│ - approve → Safe actions (file ops,     │
+│              known contacts, Slack/WhatsApp) │
+│ - reject → Dangerous (scams, phishing)  │
+│ - manual → Needs human review (social   │
+│             media, payments, new contacts) │
+└─────────────────────────────────────────┘
       ↓
-Moves to Approved/ or Rejected/
-      ↓
-Approval Monitor Detects
-      ↓
-Executes Action (if Approved)
-      ↓
+┌──────────────┬──────────────┬──────────────┐
+│ Approved/    │ Rejected/    │ Pending_     │
+│ (auto)       │ (auto)       │ Approval/    │
+│              │              │ (manual)     │
+└──────────────┴──────────────┴──────────────┘
+      ↓              ↓              ↓
+Approval Monitor     Discard       Human Reviews
+Executes Action                      ↓
+                              Moves to Approved/
+                              ↓
+                              Approval Monitor
+                              Detects & Executes
+                              ↓
 Logs/ YYYY-MM-DD.json
-      ↓
+                              ↓
 Moves to Done/ (or Rejected/)
 ```
 
 ### Modularity
 
-- **Separation of Concerns**: Detection → Approval → Execution → Logging
+- **Separation of Concerns**: Detection → AI Approval → Human Review → Execution → Logging
 - **Risk-Based Categories**: High/Medium/Low priority actions
 - **Time-Based Escalation**: Auto-escalate overdue approvals
 - **Integration Points**: Works with all watchers and action scripts
+- **AI-First Approach**: Smart auto-approval reduces manual review burden
+
+### AI Auto-Approver
+
+The AI Auto-Approver (`scripts/auto_approver.py`) uses **Claude 3 Haiku** to make intelligent approval decisions, dramatically reducing the manual review burden while maintaining security.
+
+**How It Works:**
+
+1. **Scans** `Needs_Action/` and `Inbox/` every 2 minutes
+2. **Reads** each action file's content and metadata
+3. **Loads** Company_Handbook.md for context and rules
+4. **Calls** Claude 3 Haiku API with:
+   - Action type and service
+   - Content (first 2000 chars)
+   - Company rules (first 3000 chars)
+   - Request for single-word decision: approve/reject/manual
+
+5. **Claude decides:**
+   - **approve** → Safe to auto-approve (file ops, known contacts, Slack/WhatsApp)
+   - **reject** → Dangerous (scams, phishing, payment requests)
+   - **manual** → Needs human review (social media, payments, new contacts)
+
+6. **Files moved to:**
+   - `Approved/` → Auto-approved actions (executed by monitors)
+   - `Rejected/` → Rejected as unsafe
+   - `Pending_Approval/` → Requires human review
+
+**AI Decision Examples:**
+
+```
+[INPUT] Slack message from team: "Meeting at 3pm"
+[AI] approve → Moves to Approved/ → Auto-executed
+
+[INPUT] Email: "URGENT: Send $5000 wire transfer now!!!"
+[AI] reject → Moves to Rejected/ → Blocked
+
+[INPUT] LinkedIn post: "Check out our new product"
+[AI] manual → Moves to Pending_Approval/ → Human reviews
+
+[INPUT] File drop in Inbox/
+[AI] approve → Moves to Approved/ → Auto-processed
+
+[INPUT] Email from known contact "mom@gmail.com"
+[AI] manual → Moves to Pending_Approval/ → Human reviews (not in known contacts)
+```
+
+**Safety Features:**
+
+- **Fallback Rules**: If Claude API unavailable, uses rule-based fallback
+- **Conservative Default**: When uncertain, defaults to "manual" review
+- **Audit Trail**: All AI decisions logged with "approved_by": "AI (Claude)"
+- **Context Awareness**: Reads Company_Handbook.md for business-specific rules
+
+**Configuration:**
+
+```bash
+# Run once (for testing)
+python scripts/auto_approver.py --vault AI_Employee_Vault --once
+
+# Run continuously (PM2 manages this)
+pm2 start auto-approver
+
+# Set API key
+export ANTHROPIC_API_KEY="your-api-key"
+pm2 restart auto-approver --update-env
+```
+
+**Cost & Performance:**
+
+- **Model**: Claude 3 Haiku (fastest, cheapest)
+- **Cost**: ~$0.00025 per decision (1M tokens/$0.25)
+- **Speed**: ~1-2 seconds per decision
+- **Frequency**: Every 2 minutes
+- **Monthly Cost**: ~$5-10 for moderate usage
+
+**Monitoring:**
+
+```bash
+# Check AI approval logs
+pm2 logs auto-approver --lines 50
+
+# View recent decisions
+cat AI_Employee_Vault/Logs/$(date +%Y-%m-%d).json | jq '.[] | select(.component == "auto_approver")'
+
+# Check approval stats
+ls AI_Employee_Vault/Approved/ | wc -l  # Auto-approved
+ls AI_Employee_Vault/Pending_Approval/ | wc -l  # Manual review
+ls AI_Employee_Vault/Rejected/ | wc -l  # Rejected
+```
 
 ## Workflow
 
@@ -173,59 +277,81 @@ mv "Pending_Approval/EMAIL_client_20260111.md" "Approved/"
 
 ### Email Actions
 
-**Auto-Approve** (low risk):
-- Replies to known contacts
+**AI Auto-Approves** (low risk):
+- Replies to known contacts (in whitelist)
 - Internal team communications
-- Status updates
+- Status updates from trusted sources
 
-**Require Approval** (medium/high risk):
-- New recipients
+**AI Requires Manual Review** (medium/high risk):
+- Unknown senders
 - Bulk sends (>5 recipients)
 - External communications
 - Attachments
+- Financial keywords (invoice, payment, urgent)
 
 ### Social Media Actions
 
-**Auto-Approve** (low risk):
-- Scheduled posts (pre-approved content)
-
-**Require Approval** (medium/high risk):
-- New posts (not pre-scheduled)
+**AI Requires Manual Review** (always):
+- **All** social media posts (LinkedIn, Twitter, Instagram, Facebook)
 - Replies/DMs
-- Controversial topics
-- Platform-specific restrictions
+- Scheduled posts
+
+**Rationale**: Public-facing content always needs human review, regardless of pre-scheduling.
 
 ### Payment Actions
 
-**Require Approval** (always):
-- **All** payments to new payees
-- Payments >$100 (even known payees)
-- Recurring payments
-- International transfers
+**AI Auto-Rejects** (always):
+- Payment requests
+- Invoice processing
+- Wire transfer requests
+- "Urgent" financial requests
+
+**Rationale**: Payments are too high-risk for AI approval.
 
 ### Calendar Actions
 
-**Auto-Approve** (low risk):
+**AI Auto-Approves** (low risk):
 - Personal calendar updates
 - Tentative holds
+- Meetings without attendees
 
-**Require Approval** (medium/high risk):
+**AI Requires Manual Review** (medium/high risk):
 - Meetings with external attendees
 - Recurring meeting creation
 - Calendar invites to >5 people
 
+### File Operations
+
+**AI Auto-Approves** (safe operations):
+- File drops in Inbox/
+- File organization
+- Task categorization
+- Meeting preparation
+
+**Rationale**: File operations within the vault are inherently safe.
+
+### Messaging
+
+**AI Auto-Approves** (notifications):
+- Slack messages
+- WhatsApp messages
+- System notifications
+
+**Rationale**: These are read-only notifications, not actions.
+
 ## Risk Assessment Matrix
 
-| Action | Reversible | Impact | Approval Required |
-|--------|-----------|--------|-------------------|
-| Email to known contact | Yes | Low | No |
-| Email to new contact | Yes | Medium | Yes |
-| Payment <$50 | Maybe | Medium | Yes |
-| Payment >$100 | No | High | Yes |
-| Social post (scheduled) | Delete | Low | No |
-| Social post (immediate) | Delete | Medium | Yes |
-| Calendar invite | Cancel | Low | No |
-| File delete | No | High | Yes |
+| Action | Reversible | Impact | AI Decision | Review Required |
+|--------|-----------|--------|-------------|----------------|
+| Email to known contact | Yes | Low | Auto-approve | No |
+| Email to unknown sender | Yes | Medium | Manual review | Yes |
+| Payment request | Maybe | High | Auto-reject | N/A (blocked) |
+| Social media post | Delete | Medium | Manual review | Yes (always) |
+| Calendar (no attendees) | Cancel | Low | Auto-approve | No |
+| Calendar (with attendees) | Cancel | Medium | Manual review | Yes |
+| File drop in Inbox/ | Yes | Low | Auto-approve | No |
+| Slack/WhatsApp message | Yes | Low | Auto-approve | No |
+| Scam/Phishing attempt | N/A | High | Auto-reject | N/A (blocked) |
 
 ## Integration Points
 
@@ -347,5 +473,6 @@ cat "AI_Employee_Vault/Logs/$(date +%Y-%m-%d).json" | jq '.[] | select(.action_t
 
 ---
 
-*Last Updated: 2026-01-14*
-*Approval Manager Skill v1.1 - Gold Tier Feature*
+*Last Updated: 2026-01-17*
+*Approval Manager Skill v1.2 - AI-Powered Auto-Approval*
+*Now with Claude 3 Haiku integration for intelligent approval decisions*

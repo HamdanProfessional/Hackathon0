@@ -55,8 +55,12 @@ class MetaApprovalHandler(FileSystemEventHandler):
         self.approved_folder = self.vault_path / "Approved"
         self.done_folder = self.vault_path / "Done"
         self.logs_folder = self.vault_path / "Logs"
-        # Check META_DRY_RUN environment variable, default to dry_run parameter
-        env_dry_run = os.getenv('META_DRY_RUN', 'true').lower() == 'true'
+        # Check for Facebook or Instagram DRY_RUN environment variables
+        # This monitor handles both platforms, so check both
+        facebook_dry_run = os.getenv('FACEBOOK_DRY_RUN', 'true').lower() == 'true'
+        instagram_dry_run = os.getenv('INSTAGRAM_DRY_RUN', 'true').lower() == 'true'
+        # Use dry_run parameter OR both platform settings
+        env_dry_run = facebook_dry_run and instagram_dry_run
         self.dry_run = dry_run or env_dry_run
 
         # Ensure folders exist

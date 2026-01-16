@@ -28,6 +28,8 @@ from xero_python.identity import IdentityApi
 from requests_oauthlib import OAuth2Session
 
 from .base_watcher import BaseWatcher
+from .error_recovery import with_retry, ErrorCategory
+from .deduplication import Deduplication
 
 
 # Xero API scopes (valid OAuth 2.0 scopes only)
@@ -83,6 +85,14 @@ class XeroWatcher(BaseWatcher):
         self.xero_client = None
         self.accounting_path = self.vault_path / "Accounting"
         self.accounting_path.mkdir(parents=True, exist_ok=True)
+
+        # Use persistent deduplication for Xero items
+        self.dedup = Deduplication(
+            vault_path=vault_path,
+            state_file=".xero_state.json",
+            item_prefix="XERO",
+            scan_folders=True
+        )
 
         # Load credentials and authenticate
         self._authenticate()
@@ -394,6 +404,15 @@ status: open
             Path to created file, or None
         """
         item_type = item["type"]
+        item_id = item["id"]
+
+        # Check if already processed using persistent deduplication
+        if self.dedup.is_processed(item_id):
+            self.logger.info(f"Xero item {item_id} already processed, skipping")
+            return None
+
+        # Mark as processed immediately to prevent race conditions
+        self.dedup.mark_processed(item_id)
 
         # Only create action files for important items
         if item_type in ["invoice_overdue", "transaction_unusual"]:

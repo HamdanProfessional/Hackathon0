@@ -16,6 +16,12 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+# Fix Windows console encoding
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 
 def cleanup_old_logs(vault_path: str, retention_days: int = 90):
     """
@@ -28,7 +34,7 @@ def cleanup_old_logs(vault_path: str, retention_days: int = 90):
     logs_path = Path(vault_path) / "Logs"
 
     if not logs_path.exists():
-        print(f"⚠️  Logs directory does not exist: {logs_path}")
+        print(f"[!] Logs directory does not exist: {logs_path}")
         return
 
     # Calculate cutoff date
@@ -38,7 +44,7 @@ def cleanup_old_logs(vault_path: str, retention_days: int = 90):
     log_files = list(logs_path.glob("*.json"))
 
     if not log_files:
-        print("ℹ️  No log files found to clean up")
+        print("[i] No log files found to clean up")
         return
 
     deleted_count = 0
@@ -59,13 +65,13 @@ def cleanup_old_logs(vault_path: str, retention_days: int = 90):
                 # Delete the file
                 log_file.unlink()
                 deleted_count += 1
-                print(f"🗑️  Deleted: {log_file.name} ({file_size_mb:.2f} MB)")
+                print(f"[x] Deleted: {log_file.name} ({file_size_mb:.2f} MB)")
 
         except ValueError as e:
-            print(f"⚠️  Skipping invalid filename: {log_file.name} - {e}")
+            print(f"[!] Skipping invalid filename: {log_file.name} - {e}")
             continue
         except Exception as e:
-            print(f"❌ Error deleting {log_file.name}: {e}")
+            print(f"[ERROR] Error deleting {log_file.name}: {e}")
             continue
 
     # Create summary
@@ -82,7 +88,7 @@ def cleanup_old_logs(vault_path: str, retention_days: int = 90):
     }
 
     # Print summary
-    print(f"\n📊 Cleanup Summary:")
+    print(f"\n[*] Cleanup Summary:")
     print(f"   Retention Policy: {retention_days} days")
     print(f"   Cutoff Date: {cutoff_date.strftime('%Y-%m-%d')}")
     print(f"   Log Files Found: {len(log_files)}")
@@ -97,7 +103,7 @@ def cleanup_old_logs(vault_path: str, retention_days: int = 90):
         with open(cleanup_log_path, "a") as f:
             f.write(json.dumps(summary) + "\n")
     except Exception as e:
-        print(f"⚠️  Could not write cleanup log: {e}")
+        print(f"[!] Could not write cleanup log: {e}")
 
 
 def main():
@@ -130,9 +136,9 @@ def main():
         sys.exit(1)
 
     # Run the cleanup
-    print(f"🧹 Starting audit log cleanup (retention: {args.days} days)...")
+    print(f"[*] Starting audit log cleanup (retention: {args.days} days)...")
     cleanup_old_logs(args.vault, args.days)
-    print("✅ Cleanup complete!")
+    print("[OK] Cleanup complete!")
 
 
 if __name__ == "__main__":

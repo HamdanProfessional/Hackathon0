@@ -72,20 +72,75 @@ class WeeklyBriefingGenerator:
 
     def analyze_accounting(self) -> dict:
         """Analyze accounting folder for revenue and expenses."""
+        import re
+
         accounting_data = {
             "revenue": 0,
             "expenses": 0,
             "invoices_sent": 0,
             "invoices_paid": 0,
+            "invoices_overdue": 0,
+            "net_profit": 0,
             "subscriptions": [],
+            "month_file": None,
         }
 
         if not self.accounting_path.exists():
+            logger.info("Accounting folder does not exist - skipping accounting analysis")
             return accounting_data
 
-        # This is a placeholder - real implementation would parse
-        # actual accounting files. For now, return empty data.
-        logger.info("Accounting folder exists - implementation pending for file parsing")
+        # Find current month's accounting file
+        current_month = datetime.now().strftime("%Y-%m")
+        month_file = self.accounting_path / f"{current_month}.md"
+
+        if not month_file.exists():
+            logger.info(f"No accounting file found for {current_month}")
+            return accounting_data
+
+        accounting_data["month_file"] = str(month_file)
+
+        try:
+            content = month_file.read_text(encoding="utf-8")
+
+            # Extract Total Revenue (format: **Total Revenue:** $X,XXX.XX)
+            revenue_match = re.search(r'\*\*Total Revenue:\*\*\s*\$?([\d,]+\.?\d*)', content)
+            if revenue_match:
+                accounting_data["revenue"] = float(revenue_match.group(1).replace(",", ""))
+
+            # Extract Total Expenses (format: **Total Expenses:** $X,XXX.XX)
+            expenses_match = re.search(r'\*\*Total Expenses:\*\*\s*\$?([\d,]+\.?\d*)', content)
+            if expenses_match:
+                accounting_data["expenses"] = float(expenses_match.group(1).replace(",", ""))
+
+            # Extract Net Profit (format: **Net Profit:** $X,XXX.XX)
+            profit_match = re.search(r'\*\*Net Profit:\*\*\s*\$?([\d,]+\.?\d*)', content)
+            if profit_match:
+                accounting_data["net_profit"] = float(profit_match.group(1).replace(",", ""))
+
+            # Count invoices from tables
+            # Extract Invoices Sent table
+            sent_section = re.search(r'### Sent.*?(?=###|\Z)', content, re.DOTALL)
+            if sent_section:
+                # Count non-placeholder rows
+                invoice_rows = re.findall(r'\|\s*[A-Z0-9]+', sent_section.group(0))
+                accounting_data["invoices_sent"] = len([row for row in invoice_rows if 'Updated' not in row])
+
+            # Extract Overdue Invoices table
+            overdue_section = re.search(r'### Overdue.*?(?=###|\Z)', content, re.DOTALL)
+            if overdue_section:
+                # Count non-placeholder rows
+                overdue_rows = re.findall(r'\|\s*[A-Z0-9]+', overdue_section.group(0))
+                accounting_data["invoices_overdue"] = len([row for row in overdue_rows if 'Updated' not in row])
+
+            logger.info(f"Accounting data loaded from {month_file.name}")
+            logger.info(f"  Revenue: ${accounting_data['revenue']:,.2f}")
+            logger.info(f"  Expenses: ${accounting_data['expenses']:,.2f}")
+            logger.info(f"  Net Profit: ${accounting_data['net_profit']:,.2f}")
+            logger.info(f"  Invoices Sent: {accounting_data['invoices_sent']}")
+            logger.info(f"  Invoices Overdue: {accounting_data['invoices_overdue']}")
+
+        except Exception as e:
+            logger.warning(f"Error parsing accounting file {month_file}: {e}")
 
         return accounting_data
 
@@ -245,13 +300,15 @@ week_number: {week_number}
 | Metric | Amount | Change vs Last Week |
 |--------|--------|-------------------|
 | Revenue | ${accounting['revenue']:,.2f} | - |
+| Net Profit | ${accounting['net_profit']:,.2f} | - |
 | Invoices Sent | {accounting['invoices_sent']} | - |
-| Invoices Paid | {accounting['invoices_paid']} | - |
+| Invoices Overdue | {accounting['invoices_overdue']} | - |
 
 ### Month to Date
 | Metric | MTD | Goal | Progress |
 |--------|-----|------|----------|
 | Revenue | ${accounting['revenue']:,.2f} | ${goals['monthly_goal']:,.2f} | {min(100, int(accounting['revenue'] / goals['monthly_goal'] * 100)) if goals['monthly_goal'] > 0 else 0}% |
+| Net Profit | ${accounting['net_profit']:,.2f} | - | - |
 
 ---
 

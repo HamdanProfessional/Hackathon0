@@ -11,9 +11,16 @@ Usage:
 
 import argparse
 import logging
+import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 import re
+
+# Fix Windows console encoding
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -22,11 +29,11 @@ logger = logging.getLogger(__name__)
 class DailyReviewGenerator:
     """Generate daily review plans from vault content."""
 
-    # Priority icons
-    ICON_CRITICAL = "🔴"
-    ICON_HIGH = "🟠"
-    ICON_MEDIUM = "🟡"
-    ICON_LOW = "🟢"
+    # Priority icons (ASCII-safe for Windows console)
+    ICON_CRITICAL = "[!]"
+    ICON_HIGH = "[^]"
+    ICON_MEDIUM = "[-]"
+    ICON_LOW = "[o]"
 
     def __init__(self, vault_path: str):
         self.vault_path = Path(vault_path)

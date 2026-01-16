@@ -1,0 +1,45 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-filesystem", "C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP"]
+    },
+    "browser": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@playwright/mcp"]
+    },
+    "email": {
+      "command": "node",
+      "args": ["C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\mcp-servers\\email-mcp\\dist\\index.js"],
+      "env": {
+        "GMAIL_CREDENTIALS_PATH": "C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\mcp-servers\\email-mcp\\credentials.json",
+        "GMAIL_TOKEN_PATH": "C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\.gmail_token.json"
+      }
+    },
+    "calendar": {
+      "command": "node",
+      "args": ["C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\mcp-servers\\calendar-mcp\\dist\\index.js"],
+      "env": {
+        "GOOGLE_CALENDAR_CREDENTIALS": "C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\mcp-servers\\calendar-mcp\\credentials.json",
+        "GOOGLE_CALENDAR_TOKEN": "C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\.calendar_token.json"
+      }
+    },
+    "slack": {
+      "command": "node",
+      "args": ["C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\mcp-servers\\slack-mcp\\dist\\index.js"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}"
+      }
+    },
+    "xero": {
+      "command": "node",
+      "args": ["C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\mcp-servers\\xero-mcp\\dist\\index.js"],
+      "env": {
+        "XERO_CLIENT_ID": "${XERO_CLIENT_ID}",
+        "XERO_CLIENT_SECRET": "${XERO_CLIENT_SECRET}",
+        "XERO_REDIRECT_URI": "http://localhost:3000/callback",
+        "XERO_SCOPES": "accounting.transactions accounting.reports.read accounting.contacts offline_access"
+      }
+    }
+  }
+}

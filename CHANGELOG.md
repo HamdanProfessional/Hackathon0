@@ -352,8 +352,9 @@ All core skills now include proper YAML frontmatter per hackathon0.md:
 ### 🚀 **Deployment**
 
 #### PM2 Processes
-- `meta-approval-monitor` - Already handles Facebook posts
-- No configuration changes needed (uses existing META_DRY_RUN environment variable)
+- `facebook-approval-monitor` - Handles Facebook posts (uses FACEBOOK_DRY_RUN)
+- `instagram-approval-monitor` - Handles Instagram posts (uses INSTAGRAM_DRY_RUN)
+- Separate environment variables for independent control
 - All 16 PM2 processes still running (0 crashes)
 
 #### All Systems Operational

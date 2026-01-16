@@ -10,13 +10,130 @@ import sys
 import time
 import random
 import json
+import os
+import socket
+import platform
 from pathlib import Path
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 
+# Fix Windows console encoding for Unicode characters
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 # Typing speed (faster for efficiency)
 TYPING_MIN_DELAY = 0.01  # 10ms
 TYPING_MAX_DELAY = 0.03  # 30ms
+
+
+def ensure_chrome_cdp_running():
+    """
+    Check if Chrome CDP is running on port 9222. If not, automatically start it.
+    This preserves your existing Chrome session with logins.
+    """
+    import subprocess
+    # Check if port 9222 is already in use
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    result = sock.connect_ex(('localhost', 9222))
+    sock.close()
+
+    if result == 0:
+        print(f"[OK] Chrome CDP detected on port 9222 - using existing session")
+        return
+
+    print("[INFO] Chrome CDP not available - auto-starting...")
+    system = platform.system()
+
+    if system == "Windows":
+        # Use subprocess to start Chrome in background
+        chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+        profile_dir = r"C:\Users\User\ChromeAutomationProfile"
+
+        command = [
+            chrome_path,
+            "--remote-debugging-port=9222",
+            f"--user-data-dir={profile_dir}",
+            f"--profile-directory={profile_dir}",
+            "--start-maximized",
+            "about:blank"
+        ]
+
+        print(f"[INFO] Starting Chrome CDP: {chrome_path}")
+
+        try:
+            process = subprocess.Popen(command, creationflags=subprocess.CREATE_NO_WINDOW)
+            print("[OK] Chrome CDP started (PID: " + str(process.pid) + ")")
+            print("[INFO] Chrome automation window should open in background")
+            print("[INFO] This Chrome is separate from your main Chrome profile")
+
+            # Wait for Chrome to start
+            time.sleep(3)
+
+            # Check if it started successfully
+            sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock2.settimeout(2)
+            result2 = sock2.connect_ex(('localhost', 9222))
+            sock2.close()
+
+            if result2 == 0:
+                print("[OK] Chrome CDP is ready!")
+                return
+            else:
+                raise Exception("Chrome CDP failed to start")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to start Chrome CDP: {e}")
+            print("\n[INFO] Please manually start Chrome with:")
+            print("[INFO]   START_AUTOMATION_CHROME.bat")
+            raise Exception("Chrome CDP not available")
+
+    elif system == "Darwin":  # macOS
+        # Use subprocess to start Chrome in background
+        chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        command = [
+            chrome_path,
+            "--remote-debugging-port=9222",
+            "--profile-directory=~/Library/Application Support/Google/Chrome"
+        ]
+
+        try:
+            process = subprocess.Popen(command)
+            print("[OK] Chrome CDP started (PID: " + str(process.pid) + ")")
+            time.sleep(5)
+
+            # Check if it started
+            if sock.connect_ex(('localhost', 9222)) == 0:
+                print("[OK] Chrome CDP is ready!")
+                return
+            else:
+                raise Exception("Chrome CDP failed to start")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to start Chrome CDP: {e}")
+            print("\n[INFO] Please manually start Chrome with:")
+            print("[INFO]   /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222")
+            raise Exception("Chrome CDP not available")
+
+    else:  # Linux
+        command = ["google-chrome", "--remote-debugging-port=9222"]
+
+        try:
+            process = subprocess.Popen(command)
+            print("[OK] Chrome CDP started (PID: " + str(process.pid) + ")")
+            time.sleep(5)
+
+            if sock.connect_ex(('localhost', 9222)) == 0:
+                print("[OK] Chrome CDP is ready!")
+                return
+            else:
+                raise Exception("Chrome CDP failed to start")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to start Chrome CDP: {e}")
+            raise Exception("Chrome CDP not available")
 
 
 def generate_instagram_image(text: str, output_path: str) -> Path:
@@ -40,27 +157,11 @@ def generate_instagram_image(text: str, output_path: str) -> Path:
     """
     print(f"\n[ART] Generating professional image from text...")
 
-    # Remove emojis from text (they cause rendering errors)
-    import re
-    # Simple emoji removal - remove characters outside ASCII range
-    clean_text = re.sub(r'[^\x00-\x7F]+', '', text)
-    # Replace common emoji replacements
-    emoji_map = {
-        '🚀': '',
-        '📧': '',
-        '📅': '',
-        '💬': '',
-        '📁': '',
-        '🤖': '',
-        '✅': '',
-        '📊': '',
-        '⚠️': '',
-        '❌': '',
-    }
-    for emoji, replacement in emoji_map.items():
-        clean_text = clean_text.replace(emoji, replacement)
+    # Keep emojis in the text for the image (emojis are now supported in images)
+    # Just clean up extra whitespace
+    clean_text = text
 
-    # Clean up extra whitespace
+    # Clean up extra whitespace and newlines
     clean_text = '\n'.join(line.strip() for line in clean_text.split('\n') if line.strip())
 
     # Image dimensions (Instagram square - 1:1 ratio)
@@ -151,11 +252,11 @@ def generate_instagram_image(text: str, output_path: str) -> Path:
     # Padding
     padding = 120
 
-    # Load fonts with better sizing
+    # Load fonts with better sizing (1.5x smaller for better readability)
     try:
-        font_title = ImageFont.truetype("arial.ttf", 64)
-        font_body = ImageFont.truetype("arial.ttf", 46)
-        font_footer = ImageFont.truetype("arial.ttf", 30)
+        font_title = ImageFont.truetype("arial.ttf", 42)  # Was 64
+        font_body = ImageFont.truetype("arial.ttf", 30)   # Was 46
+        font_footer = ImageFont.truetype("arial.ttf", 20)  # Was 30
     except:
         font_title = ImageFont.load_default()
         font_body = ImageFont.load_default()
@@ -188,13 +289,14 @@ def generate_instagram_image(text: str, output_path: str) -> Path:
         # Wrap and draw body text
         if remaining_text:
             # Calculate optimal line width based on character count
+            # Use larger widths to support at least 5 words per line
             char_count = len(remaining_text)
             if char_count < 100:
-                wrap_width = 30
+                wrap_width = 80  # ~16 words
             elif char_count < 200:
-                wrap_width = 28
+                wrap_width = 75  # ~15 words
             else:
-                wrap_width = 24
+                wrap_width = 70  # ~14 words
 
             wrapped_lines = textwrap.wrap(remaining_text, width=wrap_width)
 
@@ -261,15 +363,15 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
     Returns:
         dict with success status and summary
     """
-    print(f"\n📸 Posting to Instagram...")
+    print(f"\n[INFO] Posting to Instagram...")
     print(f"   Image: {image_path}")
     print(f"   Caption length: {len(caption)} chars")
 
-    # Check DRY_RUN mode
-    dry_run = os.getenv('META_DRY_RUN', 'true').lower() == 'true'
+    # Check DRY_RUN mode - use INSTAGRAM_DRY_RUN
+    dry_run = os.getenv('INSTAGRAM_DRY_RUN', 'true').lower() == 'true'
 
     if dry_run:
-        print(f"\n🔄 DRY RUN MODE - Skipping actual post")
+        print(f"\n[INFO] DRY RUN MODE - Skipping actual post")
         return {
             'success': True,
             'summary': f'DRY RUN: Would post to Instagram with caption ({len(caption)} chars)',
@@ -277,21 +379,30 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
         }
 
     try:
+        # Ensure Chrome CDP is running
+        ensure_chrome_cdp_running()
+
         with sync_playwright() as p:
             # Connect to Chrome CDP
-            browser = p.chromium.connect_over_cdp("http://localhost:9222")
+            try:
+                browser = p.chromium.connect_over_cdp("http://localhost:9222")
+            except Exception as e:
+                print(f"[ERROR] Could not connect to Chrome CDP: {e}")
+                print(f"[INFO] Please ensure Chrome is running with CDP enabled on port 9222")
+                raise
+
             context = browser.contexts[0]
             page = context.pages[0] if context.pages else context.new_page()
 
-            print(f"✅ Connected to Chrome CDP")
+            print(f"[OK] Connected to Chrome CDP")
 
             # Navigate to Instagram
-            print(f"🌐 Navigating to Instagram...")
+            print(f"[INFO] Navigating to Instagram...")
             page.goto("https://www.instagram.com/", timeout=30000)
             time.sleep(random.uniform(2, 3))
 
             # Click Create button
-            print(f"🎯 Looking for Create button...")
+            print(f"[INFO] Looking for Create button...")
             create_selectors = [
                 'div[role="button"]:has-text("Create")',
                 'svg[aria-label="New post"]',
@@ -305,7 +416,7 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
                     if page.locator(selector).count() > 0:
                         page.click(selector, timeout=5000)
                         create_clicked = True
-                        print(f"✅ Create button clicked")
+                        print(f"[OK] Create button clicked")
                         break
                 except:
                     continue
@@ -316,15 +427,15 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
             time.sleep(random.uniform(1.5, 2))
 
             # Upload image
-            print(f"📤 Uploading image...")
+            print(f"[INFO] Uploading image...")
             file_input = page.locator('input[type="file"]')
             file_input.set_input_files(image_path)
-            print(f"✅ Image uploaded")
+            print(f"[OK] Image uploaded")
 
             time.sleep(random.uniform(2, 3))
 
             # Click Next button
-            print(f"➡️  Clicking Next...")
+            print(f"[INFO] Clicking Next...")
             next_selectors = [
                 'div[role="button"]:has-text("Next")',
                 'button:has-text("Next")',
@@ -337,7 +448,7 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
                     if page.locator(selector).count() > 0:
                         page.click(selector, timeout=5000)
                         next_clicked = True
-                        print(f"✅ Next clicked")
+                        print(f"[OK] Next clicked")
                         break
                 except:
                     continue
@@ -348,7 +459,7 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
             time.sleep(random.uniform(1.5, 2))
 
             # Type caption
-            print(f"✍️  Typing caption...")
+            print(f"[INFO] Typing caption...")
             caption_selectors = [
                 'div[role="textbox"]',
                 'textarea[placeholder*="Write a caption"]',
@@ -371,18 +482,18 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
                         time.sleep(0.3)
 
                         caption_typed = True
-                        print(f"✅ Caption typed ({len(caption)} chars)")
+                        print(f"[OK] Caption typed ({len(caption)} chars)")
                         break
                 except:
                     continue
 
             if not caption_typed:
-                print(f"⚠️  Could not type caption, continuing anyway...")
+                print(f"[WARN] Could not type caption, continuing anyway...")
 
             time.sleep(random.uniform(1, 1.5))
 
             # Click Share button
-            print(f"📤 Clicking Share...")
+            print(f"[INFO] Clicking Share...")
             share_selectors = [
                 'div[role="button"]:has-text("Share")',
                 'button[type="submit"]',
@@ -396,7 +507,7 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
                     if page.locator(selector).count() > 0:
                         page.click(selector, timeout=5000)
                         share_clicked = True
-                        print(f"✅ Share clicked")
+                        print(f"[OK] Share clicked")
                         break
                 except:
                     continue
@@ -406,7 +517,7 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
 
             time.sleep(random.uniform(3, 4))
 
-            print(f"\n✅ Successfully posted to Instagram!")
+            print(f"\n[OK] Successfully posted to Instagram!")
 
             # Log action
             try:
@@ -422,7 +533,7 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
                     result="success"
                 )
             except Exception as e:
-                print(f"⚠️  Could not log action: {e}")
+                print(f"[WARN] Could not log action: {e}")
 
             return {
                 'success': True,
@@ -431,7 +542,7 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
             }
 
     except Exception as e:
-        print(f"\n❌ Error posting to Instagram: {e}")
+        print(f"\n[ERROR] Error posting to Instagram: {e}")
         import traceback
         traceback.print_exc()
 
@@ -458,8 +569,11 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
 if __name__ == "__main__":
     import os
 
-    # Test image generation
-    if len(sys.argv) > 1:
+    # Check for --live flag or environment variable
+    live_mode = "--live" in sys.argv or os.getenv('INSTAGRAM_DRY_RUN', 'true').lower() == 'false'
+
+    # Test image generation (always run this first)
+    if len(sys.argv) > 1 and sys.argv[1] != "--live":
         test_text = sys.argv[1]
     else:
         test_text = "Testing professional Instagram image generation with better colors and design!"
@@ -470,3 +584,22 @@ if __name__ == "__main__":
 
     image_path = generate_instagram_image(test_text, str(output_path))
     print(f"\n[SUCCESS] Test image created at: {image_path}")
+
+    # If live mode, actually post to Instagram
+    if live_mode and len(sys.argv) > 1 and sys.argv[1] != "--live":
+        # Get the caption (first argument or second if --live is first)
+        if "--live" in sys.argv:
+            if len(sys.argv) > 2:
+                caption = sys.argv[2]
+            else:
+                print("\n[ERROR] No caption provided for live posting")
+                sys.exit(1)
+        else:
+            caption = test_text
+
+        print(f"\n[INFO] LIVE MODE - Actually posting to Instagram...")
+        result = post_to_instagram(str(image_path), caption)
+        print(f"\nResult: {result['summary']}")
+    elif not live_mode:
+        print(f"\n[INFO] Test mode only. Use --live flag to actually post.")
+        print(f"[INFO] Example: python instagram_poster_v2.py \"Your caption here\" --live")

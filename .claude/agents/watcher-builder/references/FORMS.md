@@ -1,3 +1,9 @@
+---
+name: watcher-builder
+description: Templates for generating different types of watchers
+license: MIT
+---
+
 # Watcher Builder Templates
 
 This document contains templates for generating different types of watchers.

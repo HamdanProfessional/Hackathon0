@@ -1,3 +1,9 @@
+---
+name: watcher-builder
+description: Technical reference for building watchers that integrate with the AI Employee system
+license: MIT
+---
+
 # Watcher Builder Reference
 
 Technical reference for building watchers that integrate with the AI Employee system.

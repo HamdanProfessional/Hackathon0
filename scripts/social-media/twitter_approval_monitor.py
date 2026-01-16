@@ -19,8 +19,6 @@ import os
 import re
 from pathlib import Path
 from datetime import datetime
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 # Fix Windows console encoding
 if sys.platform == 'win32':
@@ -45,9 +43,9 @@ if sys.platform == 'win32':
     print = safe_print
 
 
-class TwitterApprovalHandler(FileSystemEventHandler):
+class TwitterApprovalMonitor:
     """
-    Handles approved Twitter (X) post files.
+    Monitors the Approved/ folder for Twitter posts using polling.
     """
 
     def __init__(self, vault_path: str, dry_run: bool = False):
@@ -58,27 +56,37 @@ class TwitterApprovalHandler(FileSystemEventHandler):
         # Check TWITTER_DRY_RUN environment variable, default to dry_run parameter
         env_dry_run = os.getenv('TWITTER_DRY_RUN', 'true').lower() == 'true'
         self.dry_run = dry_run or env_dry_run
+        self._is_running = False
+        self.processed_files = set()
 
         # Ensure folders exist
         self.done_folder.mkdir(parents=True, exist_ok=True)
         self.logs_folder.mkdir(parents=True, exist_ok=True)
 
-    def on_created(self, event):
-        """Called when a file is created in /Approved/ folder."""
-        if event.is_directory:
-            return
+    def check_for_updates(self) -> list:
+        """Check for newly approved Twitter posts."""
+        updates = []
 
-        filepath = Path(event.src_path)
+        if not self._is_running:
+            return updates
 
-        # Only process Twitter approval files
-        if not filepath.name.startswith(("TWITTER_POST_", "TWEET_", "X_POST_")):
-            return
+        # Get list of markdown files in Approved/
+        patterns = ["TWITTER_POST_", "TWEET_", "X_POST_"]
+        files = []
+        for pattern in patterns:
+            files.extend(self.approved_folder.glob(f"{pattern}*.md"))
 
-        if not filepath.suffix == ".md":
-            return
+        for filepath in files:
+            # Skip files we've already processed
+            if str(filepath) in self.processed_files:
+                continue
 
-        print(f"\n[OK] Detected approved Twitter post: {filepath.name}")
-        self.process_approved_post(filepath)
+            print(f"\n[OK] Detected approved Twitter post: {filepath.name}")
+            self.process_approved_post(filepath)
+            self.processed_files.add(str(filepath))
+            updates.append(filepath)
+
+        return updates
 
     def process_approved_post(self, filepath: Path):
         """
@@ -172,10 +180,32 @@ class TwitterApprovalHandler(FileSystemEventHandler):
         if content_match:
             details['content'] = content_match.group(1).strip()
         else:
-            # Fallback: try to find content after "## Content"
-            fallback_match = re.search(r'## Content\s*\n+(.+?)(?=##|\Z)', content, re.DOTALL)
-            if fallback_match:
-                details['content'] = fallback_match.group(1).strip()
+            # Fallback: extract content after frontmatter, stopping at metadata
+            parts = content.split('---')
+            if len(parts) >= 3:
+                content_section = '---'.join(parts[2:]).strip()
+
+                # Stop at metadata sections
+                lines = content_section.split('\n')
+                content_lines = []
+
+                for line in lines:
+                    # Stop at metadata sections
+                    if line.startswith('## Metadata') or line.startswith('## Approval Required') or line.startswith('## To Reject'):
+                        break
+                    if line.strip() == '---':
+                        break
+                    content_lines.append(line)
+
+                result = '\n'.join(content_lines).strip()
+                # Remove ## Content header if present
+                result = re.sub(r'^## Content\s*\n', '', result)
+                result = result.strip()
+
+                if result:
+                    details['content'] = result
+                else:
+                    return None
             else:
                 return None
 
@@ -219,6 +249,8 @@ class TwitterApprovalHandler(FileSystemEventHandler):
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='replace',  # Replace characters that can't be decoded
                 timeout=120  # 2 minutes timeout
             )
 
@@ -323,6 +355,30 @@ Successfully published to Twitter (X)
         except Exception as e:
             print(f"[ERROR] Could not write to log: {e}")
 
+    def run(self):
+        """Main loop for continuous operation with 30-second polling."""
+        try:
+            self._is_running = True
+
+            while self._is_running:
+                time.sleep(30)  # Check every 30 seconds
+
+                try:
+                    updates = self.check_for_updates()
+
+                    if updates:
+                        print(f"\n[INFO] Processing {len(updates)} approved post(s)...")
+                    else:
+                        print("[INFO] Waiting for approved Twitter posts...")
+
+                except Exception as e:
+                    print(f"[ERROR] Error in main loop: {e}")
+
+        except KeyboardInterrupt:
+            print("\n\n[INFO] Stopping Twitter approval monitor...")
+            self._is_running = False
+            print("[OK] Monitor stopped")
+
 
 def main():
     """Main entry point."""
@@ -348,32 +404,25 @@ def main():
     approved_folder = vault_path / "Approved"
     approved_folder.mkdir(parents=True, exist_ok=True)
 
-    # Create handler first to get the actual dry_run state (from env or args)
-    event_handler = TwitterApprovalHandler(args.vault, args.dry_run)
+    # Create monitor
+    monitor = TwitterApprovalMonitor(args.vault, args.dry_run)
 
     print("=" * 60)
     print("Twitter (X) Approval Monitor")
     print("=" * 60)
     print(f"Vault: {vault_path}")
     print(f"Watching: {approved_folder}")
-    print(f"Mode: {'DRY RUN' if event_handler.dry_run else 'LIVE'}")
+    print(f"Mode: {'DRY RUN' if monitor.dry_run else 'LIVE'}")
+    print("Polling interval: 30 seconds")
     print("=" * 60)
     print("\n[INFO] Waiting for approved posts...")
     print("[INFO] Press Ctrl+C to stop\n")
 
-    observer = Observer()
-    observer.schedule(event_handler, str(approved_folder), recursive=False)
-    observer.start()
-
+    # Run continuous polling
     try:
-        while True:
-            time.sleep(1)
+        monitor.run()
     except KeyboardInterrupt:
-        print("\n\n[INFO] Stopping monitor...")
-        observer.stop()
-    observer.join()
-
-    print("[OK] Monitor stopped")
+        print("\n[OK] Monitor stopped")
 
 
 if __name__ == "__main__":

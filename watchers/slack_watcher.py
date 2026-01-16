@@ -26,6 +26,7 @@ except ImportError:
 
 from .base_watcher import BaseWatcher
 from .error_recovery import with_retry, ErrorCategory
+from .deduplication import Deduplication
 
 
 class SlackWatcher(BaseWatcher):
@@ -80,8 +81,15 @@ class SlackWatcher(BaseWatcher):
         self.channels_to_watch = channels_to_watch or []
 
         self.client = WebClient(token=self.bot_token)
-        self.processed_ids = set()
         self.last_check_time = datetime.utcnow() - timedelta(minutes=5)
+
+        # Use persistent deduplication instead of in-memory set
+        self.dedup = Deduplication(
+            vault_path=vault_path,
+            state_file=".slack_state.json",
+            item_prefix="SLACK",
+            scan_folders=True
+        )
 
         # Get bot user info
         try:
@@ -100,6 +108,7 @@ class SlackWatcher(BaseWatcher):
             List of new messages needing attention
         """
         new_messages = []
+        conversations = []
 
         try:
             # Get all conversations (channels, DMs, MPIMs)
@@ -122,8 +131,9 @@ class SlackWatcher(BaseWatcher):
                     if msg_time < self.last_check_time:
                         continue
 
-                    # Skip already processed
-                    if msg["ts"] in self.processed_ids:
+                    # Skip already processed using persistent deduplication
+                    # Use timestamp as unique ID (Slack's message ts is unique)
+                    if self.dedup.is_processed(msg["ts"]):
                         continue
 
                     # Check if message needs attention
@@ -134,7 +144,8 @@ class SlackWatcher(BaseWatcher):
                             "channel_name": channel_name,
                             "timestamp": msg_time,
                         })
-                        self.processed_ids.add(msg["ts"])
+                        # Mark as processed immediately to prevent duplicates
+                        self.dedup.mark_processed(msg["ts"])
 
         except SlackApiError as e:
             self.logger.error(f"Slack API error: {e}")
@@ -144,7 +155,7 @@ class SlackWatcher(BaseWatcher):
         # Log to audit
         self._log_audit_action("slack_check", {
             "messages_found": len(new_messages),
-            "conversations_checked": len(conversations) if 'conversations' in locals() else 0
+            "conversations_checked": len(conversations)
         })
 
         return new_messages

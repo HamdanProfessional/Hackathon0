@@ -1,26 +1,71 @@
 # AI Employee Architecture Documentation
 
-**Updated:** 2026-01-12
-**Version:** 1.0 Production Ready
+**Updated:** 2026-01-17
+**Version:** 1.3 Production Ready
+**Architecture:** AI-Powered Human-in-the-Loop
 
 ---
 
 ## 🏗️ System Architecture
 
-The AI Employee system implements a **three-tier architecture** following the Perception → Reasoning → Action pattern:
+The AI Employee system implements a **four-tier architecture** with intelligent AI-powered filtering:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     AI Employee System                          │
+│                     AI Employee System v1.3                        │
 │                                                                │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    │
-│  │ PERCEPTION   │ -> │  REASONING   │ -> │   ACTION      │    │
-│  │              │    │              │    │              │    │
-│  │  Watchers    │    │ Claude Code  │    │  MCPs +      │    │
-│  │  (Python)    │    │   + You      │    │  Posters     │    │
-│  └──────────────┘    └──────────────┘    └──────────────┘    │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────┐  │
+│  │ PERCEPTION   │ -> │   AI FILTER  │ -> │   HUMAN      │ -> │ ACTION  │  │
+│  │              │    │              │    │   REVIEW     │    │         │  │
+│  │  Watchers    │    │ Auto-Approver│    │              │    │ Monitors │  │
+│  │  (Python)    │    │ (Claude 3)   │    │ (Claude+You)  │    │+MCPs    │  │
+│  └──────────────┘    └──────────────┘    └──────────────┘    └──────────┘  │
 │                                                                │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Innovation (v1.3):** AI Auto-Approver using Claude 3 Haiku intelligently filters safe actions from those requiring human review.
+
+---
+
+## 📊 Data Flow Diagram
+
+```
+External Services
+     ↓
+   Watchers (6 total)
+-Gmail, Calendar, Slack, WhatsApp, Xero, Odoo
+     ↓
+   Creates Files in Vault
+     ↓
+┌────────────────────────────────────────────────┐
+│         Needs_Action/ (Unfiltered Items)         │
+│                                                  │
+│  ┌───────────────────────────────────────────┐  │
+│  │   AI Auto-Approver (Every 2 minutes)     │  │
+│  │                                           │  │
+│  │   Input: Action file + content           │  │
+│  │   Context: Company_Handbook.md            │  │
+│  │   AI Model: Claude 3 Haiku               │  │
+│  │                                           │  │
+│  │   Decision Logic:                         │  │
+│  │   - Read action type & content            │  │
+│  │   - Consult Company_Handbook rules       │  │
+│  │   - Return: approve/reject/manual          │  │
+│  │                                           │  │
+│  └───────────────────────────────────────────┘  │
+│         ↓             ↓             ↓              │
+│  Approved/    Rejected/    Pending_Approval/      │
+└────────────────────────────────────────────────┘
+     ↓             ↓             ↓
+   Executes     Blocked      Human Reviews
+     ↓                           ↓
+   Done/                        ↓
+                               Approved/
+                               ↓
+                            Executes
+                               ↓
+                             Done/
 ```
 
 ---
@@ -192,6 +237,117 @@ Claude has access to modular skills via `.claude/skills/`:
 - `content-generator` - Generate content
 - `weekly-briefing` - CEO summaries
 - `daily-review` - Daily workflow review
+
+---
+
+## 🤖 Layer 2.5: AI Auto-Approver (NEW in v1.3)
+
+### Purpose
+Intelligently filter actions using Claude 3 Haiku AI to dramatically reduce manual review while maintaining security.
+
+### Architecture
+
+```
+Needs_Action/ (Unfiltered)
+     ↓
+┌───────────────────────────────────────────┐
+│     AI Auto-Approver (Every 2 min)       │
+│                                          │
+│  Input:                                  │
+│  - Action file from Needs_Action/        │
+│  - Content (first 2000 chars)             │
+│  - Frontmatter metadata                   │
+│                                          │
+│  Context:                                │
+│  - Company_Handbook.md (rules)          │
+│  - Vault path                            │
+│                                          │
+│  AI Model: Claude 3 Haiku               │
+│  - Fast: ~1-2 seconds per decision        │
+│  - Cost: ~$0.00025 per decision          │
+│  - Model: claude-3-haiku-20240307        │
+│                                          │
+│  Decision Logic:                         │
+│  - Read action type                      │
+│  - Read content & metadata                │
+│  - Consult rules                        │
+│  - Safety-first approach                 │
+│                                          │
+│  Output:                                 │
+│  - "approve" → Approved/ (auto-executes)    │
+│  - "reject" → Rejected/ (blocked)         │
+│  - "manual" → Pending_Approval/ (review)  │
+└───────────────────────────────────────────┘
+     ↓             ↓              ↓
+Approved/    Rejected/    Pending_Approval/
+```
+
+### Implementation
+
+**Script:** `scripts/auto_approver.py`
+
+**Class:** `AIApprover`
+
+**Key Methods:**
+- `_load_handbook_rules()` - Load Company_Handbook.md
+- `_ask_claude_for_decision()` - Call Claude 3 Haiku API
+- `_fallback_decision()` - Rule-based fallback if API unavailable
+
+**PM2 Configuration:**
+```javascript
+{
+  name: "auto-approver",
+  script: "scripts/auto_approver.py",
+  args: "--vault AI_Employee_Vault",
+  cron_restart: "*/2 * * * *",  // Every 2 minutes
+  env: {
+    "ANTHROPIC_API_KEY": process.env.ANTHROPIC_API_KEY || ""
+  }
+}
+```
+
+### Decision Matrix
+
+| Action Type | Safe Examples | Dangerous Examples | AI Decision |
+|-------------|---------------|-------------------|-------------|
+| **Email** | Known contacts, internal | Unknown senders, financial keywords | Known → approve, Unknown → manual |
+| **Social Media** | (None - always manual) | (None) | manual (always) |
+| **Payments** | (None - always reject) | Invoice, wire transfer, "urgent" | reject (always) |
+| **Calendar** | No attendees, personal | With attendees, external | No attendees → approve, With → manual |
+| **Slack/WhatsApp** | All messages | (None - safe notifications) | approve (always) |
+| **File Operations** | Inbox drops, organization | (None - safe) | approve (always) |
+| **Scams** | (None) | "Urgent", "wire transfer", phishing | reject (always) |
+
+### Performance
+
+**Metrics:**
+- Speed: ~1-2 seconds per decision
+- Cost: ~$0.00025 per decision ($0.25 per 1M tokens)
+- Frequency: Every 2 minutes
+- Monthly cost: ~$5-10 for moderate usage
+
+**Fallback Mode:**
+- If ANTHROPIC_API_KEY not set → Uses rule-based logic
+- If API error → Logs warning, uses fallback
+- If API timeout → Retries with exponential backoff
+
+### Logging
+
+All AI decisions logged to:
+```
+AI_Employee_Vault/Logs/YYYY-MM-DD.json
+{
+  "timestamp": "2026-01-17T10:30:00Z",
+  "component": "auto_approver",
+  "action": "ai_decision",
+  "details": {
+    "file": "EMAIL_001.md",
+    "decision": "approve",
+    "approved_by": "AI (Claude)",
+    "reason": "Known contact, safe action"
+  }
+}
+```
 
 ---
 

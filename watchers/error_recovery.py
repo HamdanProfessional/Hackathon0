@@ -47,11 +47,6 @@ class ErrorConfig:
         },
 
         ErrorCategory.AUTHENTICATION: {
-            "max_attempts": 2,
-            "base_delay": 60,
-            "max_delay": 3600  # 1 hour
-        },
-        ErrorCategory.AUTHENTICATION: {
             "max_attempts": 3,
             "base_delay": 60,
             "max_delay": 3600  # 1 hour
@@ -134,20 +129,17 @@ def with_retry(
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            error_category, allow_retry = ErrorCategory.TRANSIENT, True
-
-            # Get configuration from ErrorConfig if not specified
-            if error_category:
-                error_category, allow_retry = error_category, allow_retry
+            # Default to TRANSIENT if no category specified
+            use_category = error_category or ErrorCategory.TRANSIENT
 
             # Determine retry policy
-            policy = ErrorConfig.RETRY_POLICIES.get(error_category, {})
+            policy = ErrorConfig.RETRY_POLICIES.get(use_category, {})
 
-            max_attempts = max_attempts or policy["max_attempts"]
-            base_delay = base_delay or policy["base_delay"]
-            max_delay = max_delay or policy["max_delay"]
+            attempts = max_attempts or policy.get("max_attempts", 3)
+            delay_base = base_delay or policy.get("base_delay", 1)
+            delay_max = max_delay or policy.get("max_delay", 60)
 
-            for attempt in range(max_attempts):
+            for attempt in range(attempts):
                 try:
                     return func(*args, **kwargs)
                 except Exception as error:
@@ -159,11 +151,11 @@ def with_retry(
                         raise error
 
                     # If we've used all attempts, re-raise the error
-                    if attempt == max_attempts - 1:
+                    if attempt == attempts - 1:
                         raise error
 
                     # Calculate exponential backoff delay
-                    delay = min(base_delay * (2 ** attempt), max_delay)
+                    delay = min(delay_base * (2 ** attempt), delay_max)
                     logger.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {error}")
                     logger.info(f"Retrying in {delay} seconds...")
                     time.sleep(delay)

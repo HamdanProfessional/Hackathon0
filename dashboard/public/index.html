@@ -1538,6 +1538,581 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* ==================== ANIMATIONS ==================== */
+
+    /* Keyframe Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes glow {
+      0%, 100% {
+        box-shadow: 0 0 5px var(--accent-blue);
+      }
+      50% {
+        box-shadow: 0 0 20px var(--accent-blue), 0 0 30px var(--accent-blue);
+      }
+    }
+
+    @keyframes countUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes heartbeat {
+      0%, 100% {
+        transform: scale(1);
+      }
+      25% {
+        transform: scale(1.1);
+      }
+      50% {
+        transform: scale(1);
+      }
+      75% {
+        transform: scale(1.1);
+      }
+    }
+
+    /* Content Section Animations */
+    .content-section {
+      animation: slideInUp 0.4s ease-out;
+    }
+
+    /* Card Animations */
+    .health-card, .pending-card, .process-card, .queue-card {
+      animation: scaleIn 0.3s ease-out;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .health-card:hover, .pending-card:hover, .process-card:hover, .queue-card:hover {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), var(--shadow-glow);
+    }
+
+    /* Button Animations */
+    .btn {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:active::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    /* Nav Item Animations */
+    .nav-item {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .nav-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--accent-blue);
+      transform: scaleY(0);
+      transition: transform 0.3s ease;
+    }
+
+    .nav-item:hover::before {
+      transform: scaleY(1);
+    }
+
+    .nav-item.active::before {
+      transform: scaleY(1);
+    }
+
+    /* Stat Value Animations */
+    .stat-value {
+      animation: countUp 0.6s ease-out;
+      transition: all 0.3s ease;
+    }
+
+    .stat-value:hover {
+      transform: scale(1.1);
+      cursor: pointer;
+    }
+
+    /* Toast Animations */
+    .toast {
+      animation: slideInRight 0.3s ease-out;
+      transition: all 0.3s ease;
+    }
+
+    .toast:hover {
+      transform: translateX(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .toast.toast-exit {
+      animation: fadeOut 0.3s ease-out forwards;
+    }
+
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+    }
+
+    /* Modal Animations */
+    .modal-overlay {
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .modal-container {
+      animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Loading Skeleton */
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        var(--bg-tertiary) 0%,
+        var(--bg-secondary) 50%,
+        var(--bg-tertiary) 100%
+      );
+      background-size: 1000px 100%;
+      animation: shimmer 2s infinite;
+      border-radius: var(--border-radius);
+    }
+
+    /* Live Indicator Pulse */
+    .live-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    /* Status Badges */
+    .status-badge {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .status-badge.online {
+      animation: glow 2s infinite;
+    }
+
+    /* Process List Items */
+    .process-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-left: 3px solid transparent;
+    }
+
+    .process-card:hover {
+      border-left-color: var(--accent-blue);
+      background: linear-gradient(90deg, var(--bg-tertiary) 0%, var(--card-bg) 100%);
+    }
+
+    /* Pending Cards */
+    .pending-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent;
+    }
+
+    .pending-card:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .pending-card.approving {
+      animation: bounce 0.5s ease;
+      border-color: var(--accent-green);
+    }
+
+    .pending-card.rejecting {
+      animation: slideInRight 0.3s ease;
+      border-color: var(--accent-red);
+      opacity: 0.5;
+    }
+
+    /* Quick Action Buttons */
+    .quick-action-btn {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .quick-action-btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.5s, height 0.5s;
+    }
+
+    .quick-action-btn:active::after {
+      width: 200px;
+      height: 200px;
+    }
+
+    .quick-action-btn:hover {
+      transform: translateY(-5px) scale(1.05);
+    }
+
+    .quick-action-btn:hover i {
+      animation: bounce 1s infinite;
+    }
+
+    /* Settings Toggle */
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 26px;
+      background: var(--bg-tertiary);
+      border-radius: 13px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--accent-blue);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::after {
+      transform: translateX(24px);
+    }
+
+    /* Chart Animations */
+    canvas {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Search Filter Animations */
+    .search-filter {
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .search-filter::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: var(--accent-blue);
+      transition: all 0.3s ease;
+      transform: translateX(-50%);
+    }
+
+    .search-filter:hover::before,
+    .search-filter.active::before {
+      width: 100%;
+    }
+
+    /* Log Lines Animation */
+    .log-line {
+      animation: slideInLeft 0.2s ease-out;
+      transition: all 0.2s ease;
+    }
+
+    .log-line:hover {
+      background: var(--bg-tertiary);
+      transform: translateX(5px);
+    }
+
+    /* Staggered Animation for Lists */
+    .stagger-in > * {
+      opacity: 0;
+      animation: slideInUp 0.3s ease-out forwards;
+    }
+
+    .stagger-in > *:nth-child(1) { animation-delay: 0.05s; }
+    .stagger-in > *:nth-child(2) { animation-delay: 0.1s; }
+    .stagger-in > *:nth-child(3) { animation-delay: 0.15s; }
+    .stagger-in > *:nth-child(4) { animation-delay: 0.2s; }
+    .stagger-in > *:nth-child(5) { animation-delay: 0.25s; }
+    .stagger-in > *:nth-child(6) { animation-delay: 0.3s; }
+    .stagger-in > *:nth-child(7) { animation-delay: 0.35s; }
+    .stagger-in > *:nth-child(8) { animation-delay: 0.4s; }
+    .stagger-in > *:nth-child(9) { animation-delay: 0.45s; }
+    .stagger-in > *:nth-child(10) { animation-delay: 0.5s; }
+
+    /* Smooth Scroll */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--bg-tertiary);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* Heartbeat for Critical Status */
+    .heartbeat {
+      animation: heartbeat 1.5s infinite;
+    }
+
+    /* Section Title Gradient Animation */
+    .section-title {
+      background: var(--gradient-text);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Folder Card Hover */
+    .folder-card {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .folder-card:hover {
+      transform: translateY(-8px) scale(1.05);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .folder-card:hover .folder-icon {
+      animation: bounce 0.6s infinite;
+    }
+
+    /* Kanban Card Drag */
+    .kanban-card {
+      transition: all 0.2s ease;
+      cursor: grab;
+    }
+
+    .kanban-card:active {
+      cursor: grabbing;
+      transform: scale(1.05) rotate(2deg);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .kanban-card.dragging {
+      opacity: 0.5;
+      transform: scale(0.95) rotate(-2deg);
+    }
+
+    /* Chat Message Animations */
+    .chat-message {
+      animation: slideInUp 0.3s ease-out;
+    }
+
+    .chat-message.user {
+      animation: slideInRight 0.3s ease-out;
+    }
+
+    .chat-message.ai {
+      animation: slideInLeft 0.3s ease-out;
+    }
+
+    /* Typing Indicator */
+    .typing-indicator span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--accent-blue);
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+    /* Responsive Animations */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Smooth Page Transitions */
+    .content-section {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .content-section.hidden {
+      opacity: 0;
+      transform: translateY(20px);
+      pointer-events: none;
+    }
+
+    /* Hover Glow Effect */
+    .glow-hover {
+      transition: all 0.3s ease;
+    }
+
+    .glow-hover:hover {
+      box-shadow: 0 0 20px currentColor;
+    }
+
+    /* Progress Bar Animation */
+    .progress-bar {
+      height: 4px;
+      background: var(--bg-tertiary);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent-blue);
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Notification Badge Pulse */
+    .notification-badge {
+      position: relative;
+    }
+
+    .notification-badge::after {
+      content: '';
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 12px;
+      height: 12px;
+      background: var(--accent-red);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
   </style>
 </head>
 <body>
@@ -1565,9 +2140,6 @@
     </div>
     <div class="nav-item" data-section="quick-actions">
       <i class="fas fa-bolt"></i> Quick Actions
-    </div>
-    <div class="nav-item" data-section="social-queue">
-      <i class="fas fa-share-alt"></i> Social Queue
     </div>
     <div class="nav-item" data-section="search">
       <i class="fas fa-search"></i> Search
@@ -1706,6 +2278,11 @@
               <i class="fas fa-times"></i> Reject All
             </button>
           </div>
+        </div>
+
+        <!-- Social Media Queue Overview -->
+        <div class="social-queue-grid" id="socialQueueGrid" style="margin-bottom: 20px;">
+          <!-- Queue cards will be loaded here -->
         </div>
 
         <!-- Filters -->
@@ -1972,31 +2549,6 @@
       </div>
     </div>
 
-    <!-- Social Media Queue Section -->
-    <div class="content-section" id="section-social-queue">
-      <div class="section">
-        <div class="section-header">
-          <h2 class="section-title"><i class="fas fa-share-alt"></i> Social Media Queue</h2>
-          <button class="btn btn-sm btn-success" onclick="loadSocialQueue()">
-            <i class="fas fa-sync"></i> Refresh
-          </button>
-        </div>
-
-        <div class="social-queue-grid" id="socialQueueGrid">
-          <!-- Queue cards will be loaded here -->
-        </div>
-
-        <div class="section">
-          <h3 style="font-size: 1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-            <i class="fas fa-list"></i> Pending Posts
-          </h3>
-          <div id="pendingPostsList" style="display: flex; flex-direction: column; gap: 12px;">
-            <!-- Pending posts will be loaded here -->
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Advanced Search Section -->
     <div class="content-section" id="section-search">
       <div class="section">
@@ -2182,6 +2734,276 @@
             </div>
           </div>
         </div>
+
+        <!-- Process Management -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-cogs"></i> Process Management
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-play"></i> Start All Watchers
+              <div class="setting-description">Start all monitoring processes</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-success" onclick="manageProcesses('start-all')">
+                <i class="fas fa-play"></i> Start All
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-stop"></i> Stop All Watchers
+              <div class="setting-description">Stop all monitoring processes</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-danger" onclick="manageProcesses('stop-all')">
+                <i class="fas fa-stop"></i> Stop All
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-redo"></i> Restart All
+              <div class="setting-description">Restart all processes</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-warning" onclick="manageProcesses('restart-all')">
+                <i class="fas fa-redo"></i> Restart All
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-list"></i> Process List
+              <div class="setting-description">View and manage individual processes</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="showSection('processes')">
+                <i class="fas fa-list"></i> View Processes
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-database"></i> Data Management
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-broom"></i> Clear Old Logs
+              <div class="setting-description">Remove logs older than 30 days</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="clearOldData('logs')">
+                <i class="fas fa-broom"></i> Clean Logs
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-trash"></i> Clear Done Items
+              <div class="setting-description">Remove completed items from vault</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="clearOldData('done')">
+                <i class="fas fa-trash"></i> Clean Done
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-file-export"></i> Export Vault Data
+              <div class="setting-description">Download all vault data as ZIP</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="exportVaultData()">
+                <i class="fas fa-file-export"></i> Export
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-chart-pie"></i> Vault Statistics
+              <div class="setting-description">View data usage statistics</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="showVaultStats()">
+                <i class="fas fa-chart-pie"></i> View Stats
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Integration Settings -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-plug"></i> Integration Settings
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fab fa-google"></i> Gmail Connection
+              <div class="setting-description">Check Gmail API connection status</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="checkIntegration('gmail')">
+                <i class="fas fa-check-circle"></i> Check
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fab fa-slack"></i> Slack Connection
+              <div class="setting-description">Check Slack API connection status</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="checkIntegration('slack')">
+                <i class="fas fa-check-circle"></i> Check
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-robot"></i> Odoo Connection
+              <div class="setting-description">Check Odoo database connection</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="checkIntegration('odoo')">
+                <i class="fas fa-check-circle"></i> Check
+              </button>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-calculator"></i> Xero Connection
+              <div class="setting-description">Check Xero accounting connection</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-sm btn-secondary" onclick="checkIntegration('xero')">
+                <i class="fas fa-check-circle"></i> Check
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Advanced Settings -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-tools"></i> Advanced Settings
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-bug"></i> Debug Mode
+              <div class="setting-description">Enable verbose logging for troubleshooting</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="debugMode">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-clock"></i> Auto-refresh Dashboard
+              <div class="setting-description">Automatically refresh dashboard data</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="autoRefresh" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-layer-group"></i> Compact View
+              <div class="setting-description">Use more compact cards and lists</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="compactView">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-eye"></i> Show Timestamps
+              <div class="setting-description">Display timestamps in activity feed</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="showTimestamps" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <i class="fas fa-sort-amount-down"></i> Items Per Page
+              <div class="setting-description">Number of items to display per page</div>
+            </div>
+            <div class="setting-control">
+              <select id="itemsPerPage" class="search-filter">
+                <option value="20">20 items</option>
+                <option value="50" selected>50 items</option>
+                <option value="100">100 items</option>
+                <option value="200">200 items</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="settings-section">
+          <div class="settings-header">
+            <div class="settings-title">
+              <i class="fas fa-info-circle"></i> About
+            </div>
+          </div>
+
+          <div style="padding: 15px; background: var(--bg-tertiary); border-radius: 8px;">
+            <h3 style="margin: 0 0 10px 0;">AI Employee Dashboard</h3>
+            <p style="color: var(--text-secondary); margin: 5px 0;">Version: 1.2.0</p>
+            <p style="color: var(--text-secondary); margin: 5px 0;">Build: 2026-01-16</p>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+              <a href="https://github.com/HamdanProfessional/Hackathon0" target="_blank" class="btn btn-sm btn-secondary">
+                <i class="fab fa-github"></i> GitHub
+              </a>
+              <button class="btn btn-sm btn-secondary" onclick="showSection('logs')">
+                <i class="fas fa-file-alt"></i> System Logs
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2264,6 +3086,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=6.0"></script>
+  <script src="app.js?v=8.0"></script>
 </body>
 </html>

@@ -18,8 +18,6 @@ import os
 import re
 from pathlib import Path
 from datetime import datetime
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
 # Fix Windows console encoding
 if sys.platform == 'win32':
@@ -44,9 +42,9 @@ if sys.platform == 'win32':
     print = safe_print
 
 
-class LinkedInApprovalHandler(FileSystemEventHandler):
+class LinkedInApprovalMonitor:
     """
-    Handles approved LinkedIn post files.
+    Monitors the Approved/ folder for LinkedIn posts using polling.
     """
 
     def __init__(self, vault_path: str, dry_run: bool = False):
@@ -57,27 +55,34 @@ class LinkedInApprovalHandler(FileSystemEventHandler):
         # Check LINKEDIN_DRY_RUN environment variable, default to dry_run parameter
         env_dry_run = os.getenv('LINKEDIN_DRY_RUN', 'true').lower() == 'true'
         self.dry_run = dry_run or env_dry_run
+        self._is_running = False
+        self.processed_files = set()
 
         # Ensure folders exist
         self.done_folder.mkdir(parents=True, exist_ok=True)
         self.logs_folder.mkdir(parents=True, exist_ok=True)
 
-    def on_created(self, event):
-        """Called when a file is created in /Approved/ folder."""
-        if event.is_directory:
-            return
+    def check_for_updates(self) -> list:
+        """Check for newly approved LinkedIn posts."""
+        updates = []
 
-        filepath = Path(event.src_path)
+        if not self._is_running:
+            return updates
 
-        # Only process LinkedIn approval files
-        if not filepath.name.startswith("LINKEDIN_POST_"):
-            return
+        # Get list of markdown files in Approved/
+        files = list(self.approved_folder.glob("LINKEDIN_POST_*.md"))
 
-        if not filepath.suffix == ".md":
-            return
+        for filepath in files:
+            # Skip files we've already processed
+            if str(filepath) in self.processed_files:
+                continue
 
-        print(f"\n[OK] Detected approved post: {filepath.name}")
-        self.process_approved_post(filepath)
+            print(f"\n[OK] Detected approved post: {filepath.name}")
+            self.process_approved_post(filepath)
+            self.processed_files.add(str(filepath))
+            updates.append(filepath)
+
+        return updates
 
     def process_approved_post(self, filepath: Path):
         """
@@ -145,10 +150,43 @@ class LinkedInApprovalHandler(FileSystemEventHandler):
 
     def _extract_post_content(self, content: str) -> str:
         """Extract post content from approval file."""
-        # Find content between ```
+        # First, try to find content between code blocks (```...```)
         match = re.search(r'```(.+?)```', content, re.DOTALL)
         if match:
             return match.group(1).strip()
+
+        # If no code blocks, look for content after the frontmatter
+        # Split by "---" to get the content section after frontmatter
+        parts = content.split('---')
+        if len(parts) >= 3:
+            # Everything after the second "---" is content
+            content_section = '---'.join(parts[2:]).strip()
+
+            # Remove metadata sections by stopping at certain headers
+            # Stop at: ## Metadata, ## Approval Required, ## To Reject, ---
+            lines = content_section.split('\n')
+            content_lines = []
+
+            for line in lines:
+                # Stop at metadata sections
+                if line.startswith('## Metadata') or line.startswith('## Approval Required') or line.startswith('## To Reject'):
+                    break
+                # Stop at another frontmatter
+                if line.strip() == '---':
+                    break
+
+                content_lines.append(line)
+
+            # Join and clean up
+            result = '\n'.join(content_lines).strip()
+
+            # Remove leading/trailing empty lines and the ## Content header if present
+            result = re.sub(r'^## Content\s*\n', '', result)
+            result = result.strip()
+
+            if result:
+                return result
+
         return None
 
     def _publish_to_linkedin(self, content: str) -> bool:
@@ -230,6 +268,30 @@ class LinkedInApprovalHandler(FileSystemEventHandler):
         except Exception as e:
             print(f"[ERROR] Could not write to log: {e}")
 
+    def run(self):
+        """Main loop for continuous operation with 30-second polling."""
+        try:
+            self._is_running = True
+
+            while self._is_running:
+                time.sleep(30)  # Check every 30 seconds
+
+                try:
+                    updates = self.check_for_updates()
+
+                    if updates:
+                        print(f"\n[INFO] Processing {len(updates)} approved post(s)...")
+                    else:
+                        print("[INFO] Waiting for approved LinkedIn posts...")
+
+                except Exception as e:
+                    print(f"[ERROR] Error in main loop: {e}")
+
+        except KeyboardInterrupt:
+            print("\n\n[INFO] Stopping LinkedIn approval monitor...")
+            self._is_running = False
+            print("[OK] Monitor stopped")
+
 
 def main():
     """Main entry point."""
@@ -255,32 +317,25 @@ def main():
     approved_folder = vault_path / "Approved"
     approved_folder.mkdir(parents=True, exist_ok=True)
 
-    # Create handler first to get the actual dry_run state (from env or args)
-    event_handler = LinkedInApprovalHandler(args.vault, args.dry_run)
+    # Create monitor
+    monitor = LinkedInApprovalMonitor(args.vault, args.dry_run)
 
     print("=" * 60)
     print("LinkedIn Approval Monitor")
     print("=" * 60)
     print(f"Vault: {vault_path}")
     print(f"Watching: {approved_folder}")
-    print(f"Mode: {'DRY RUN' if event_handler.dry_run else 'LIVE'}")
+    print(f"Mode: {'DRY RUN' if monitor.dry_run else 'LIVE'}")
+    print("Polling interval: 30 seconds")
     print("=" * 60)
     print("\n[INFO] Waiting for approved posts...")
     print("[INFO] Press Ctrl+C to stop\n")
 
-    observer = Observer()
-    observer.schedule(event_handler, str(approved_folder), recursive=False)
-    observer.start()
-
+    # Run continuous polling
     try:
-        while True:
-            time.sleep(1)
+        monitor.run()
     except KeyboardInterrupt:
-        print("\n\n[INFO] Stopping monitor...")
-        observer.stop()
-    observer.join()
-
-    print("[OK] Monitor stopped")
+        print("\n[OK] Monitor stopped")
 
 
 if __name__ == "__main__":

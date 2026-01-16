@@ -266,7 +266,7 @@ def post_to_instagram(image_path: str, caption: str, vault_path: str = "AI_Emplo
     print(f"   Caption length: {len(caption)} chars")
 
     # Check DRY_RUN mode
-    dry_run = os.getenv('META_DRY_RUN', 'true').lower() == 'true'
+    dry_run = os.getenv('INSTAGRAM_DRY_RUN', 'true').lower() == 'true'
 
     if dry_run:
         print(f"\n🔄 DRY RUN MODE - Skipping actual post")

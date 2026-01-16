@@ -38,7 +38,7 @@
     },
     {
       "id": "task-003",
-      " "title": "Review business performance from Logs",
+      "title": "Review business performance from Logs",
       "description": "As CEO, I need to know how the business performed last week - revenue, tasks completed, and any issues.",
       "acceptanceCriteria": [
         "Read previous week's logs from Logs/YYYY-MM-DD.json",
@@ -106,7 +106,7 @@
       "id": "task-007",
       "title": "Create follow-up task list for CEO",
       "description": "As CEO, I need a prioritized action list of what I need to review/approve this week.",
-      "acceptanceCreteria": [
+      "acceptanceCriteria": [
         "Review all generated action files from weekend",
         "Create task list in Briefings/MONDAY_ACTION_LIST_YYYY-MM-DD.md",
         "Include items requiring CEO review (payment approvals, client responses)",
@@ -115,7 +115,7 @@
         "Pass if: Action list created with all items prioritized"
       ],
       "priority": 7,
-      "pass": false,
+      "passes": false,
       "notes": "Create manual task list based on review"
     }
   ]

@@ -70,7 +70,6 @@ const sectionTitles = {
   'quick-actions': '<i class="fas fa-bolt"></i> Quick Actions',
   'goals': '<i class="fas fa-bullseye"></i> Business Goals',
   'events': '<i class="fas fa-calendar-alt"></i> Upcoming Events',
-  'social-queue': '<i class="fas fa-share-alt"></i> Social Media Queue',
   'search': '<i class="fas fa-search"></i> Advanced Search',
   'resources': '<i class="fas fa-microchip"></i> Resource Monitor',
   'tasks': '<i class="fas fa-tasks"></i> Task Management',
@@ -122,7 +121,7 @@ function showSection(section) {
     case 'dashboard': loadDashboard(); break;
     case 'processes': loadAllProcesses(); break;
     case 'watchers': loadAllProcesses(); break;  // Redirect to combined processes section
-    case 'pending': loadPending(); break;
+    case 'pending': loadPending(); loadSocialQueue(); break;
     case 'logs':
       populateProcessSelector();
       loadLogs();
@@ -133,7 +132,6 @@ function showSection(section) {
     case 'quick-actions': /* No load needed */ break;
     case 'goals': loadGoals(); break;
     case 'events': loadUpcomingEvents(); break;
-    case 'social-queue': loadSocialQueue(); break;
     case 'search': /* No auto-load */ break;
     case 'resources': loadResources(); break;
     case 'tasks': loadKanbanTasks(); break;
@@ -2766,6 +2764,151 @@ function exportSettings() {
   link.download = 'dashboard-settings.json';
   link.click();
   showToast('Settings exported', 'success');
+}
+
+// Process Management
+async function manageProcesses(action) {
+  try {
+    const response = await fetch('/api/processes/control', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action })
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      showToast(`Process ${action} successful`, 'success');
+      setTimeout(() => loadAllProcesses(), 1000);
+    } else {
+      showToast(`Process ${action} failed: ${data.message}`, 'error');
+    }
+  } catch (error) {
+    showToast(`Error: ${error.message}`, 'error');
+  }
+}
+
+// Data Management
+async function clearOldData(type) {
+  const messages = {
+    logs: 'Clear logs older than 30 days?',
+    done: 'Clear all completed items from Done folder?'
+  };
+
+  if (confirm(messages[type])) {
+    try {
+      const response = await fetch('/api/vault/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        showToast(`Cleared ${data.count} items`, 'success');
+        if (type === 'done') loadFolders();
+      } else {
+        showToast(`Clear failed: ${data.message}`, 'error');
+      }
+    } catch (error) {
+      showToast(`Error: ${error.message}`, 'error');
+    }
+  }
+}
+
+async function exportVaultData() {
+  try {
+    const response = await fetch('/api/vault/export');
+    const data = await response.json();
+
+    if (data.success) {
+      showToast('Export initiated. Check downloads folder.', 'success');
+    } else {
+      showToast(`Export failed: ${data.message}`, 'error');
+    }
+  } catch (error) {
+    showToast(`Error: ${error.message}`, 'error');
+  }
+}
+
+async function showVaultStats() {
+  try {
+    const response = await fetch('/api/vault/stats');
+    const data = await response.json();
+
+    const content = `
+      <div style="padding: 20px;">
+        <h3 style="margin-top: 0;">Vault Statistics</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+          <div style="padding: 15px; background: var(--bg-tertiary); border-radius: 8px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent-blue);">${data.totalFiles || 0}</div>
+            <div style="color: var(--text-secondary);">Total Files</div>
+          </div>
+          <div style="padding: 15px; background: var(--bg-tertiary); border-radius: 8px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent-green);">${data.pending || 0}</div>
+            <div style="color: var(--text-secondary);">Pending</div>
+          </div>
+          <div style="padding: 15px; background: var(--bg-tertiary); border-radius: 8px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent-purple);">${data.approved || 0}</div>
+            <div style="color: var(--text-secondary);">Approved</div>
+          </div>
+          <div style="padding: 15px; background: var(--bg-tertiary); border-radius: 8px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--accent-orange);">${data.done || 0}</div>
+            <div style="color: var(--text-secondary);">Done</div>
+          </div>
+        </div>
+      </div>
+    `;
+    openModal('Vault Statistics', content);
+  } catch (error) {
+    showToast(`Error: ${error.message}`, 'error');
+  }
+}
+
+// Integration Checks
+async function checkIntegration(service) {
+  try {
+    const response = await fetch(`/api/integrations/${service}/check`);
+    const data = await response.json();
+
+    if (data.connected) {
+      showToast(`${service.charAt(0).toUpperCase() + service.slice(1)} is connected`, 'success');
+    } else {
+      showToast(`${service.charAt(0).toUpperCase() + service.slice(1)} connection failed: ${data.message}`, 'error');
+    }
+  } catch (error) {
+    showToast(`Error checking ${service}: ${error.message}`, 'error');
+  }
+}
+
+// Load Settings
+function loadSettings() {
+  document.getElementById('dashboardRefresh').value = dashboardSettings.dashboardRefresh || 30000;
+  document.getElementById('analyticsRefresh').value = dashboardSettings.analyticsRefresh || 60000;
+  document.getElementById('emailNotifications').checked = dashboardSettings.emailNotifications !== false;
+  document.getElementById('errorNotifications').checked = dashboardSettings.errorNotifications !== false;
+  document.getElementById('soundEffects').checked = dashboardSettings.soundEffects || false;
+  document.getElementById('debugMode').checked = dashboardSettings.debugMode || false;
+  document.getElementById('autoRefresh').checked = dashboardSettings.autoRefresh !== false;
+  document.getElementById('compactView').checked = dashboardSettings.compactView || false;
+  document.getElementById('showTimestamps').checked = dashboardSettings.showTimestamps !== false;
+  document.getElementById('itemsPerPage').value = dashboardSettings.itemsPerPage || 50;
+}
+
+// Enhanced Save Settings
+function saveSettings() {
+  dashboardSettings.dashboardRefresh = parseInt(document.getElementById('dashboardRefresh').value);
+  dashboardSettings.analyticsRefresh = parseInt(document.getElementById('analyticsRefresh').value);
+  dashboardSettings.emailNotifications = document.getElementById('emailNotifications').checked;
+  dashboardSettings.errorNotifications = document.getElementById('errorNotifications').checked;
+  dashboardSettings.soundEffects = document.getElementById('soundEffects').checked;
+  dashboardSettings.debugMode = document.getElementById('debugMode').checked;
+  dashboardSettings.autoRefresh = document.getElementById('autoRefresh').checked;
+  dashboardSettings.compactView = document.getElementById('compactView').checked;
+  dashboardSettings.showTimestamps = document.getElementById('showTimestamps').checked;
+  dashboardSettings.itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+
+  localStorage.setItem('dashboardSettings', JSON.stringify(dashboardSettings));
+  showToast('Settings saved successfully', 'success');
 }
 
 // ==================== AI CHAT INTERFACE ====================
