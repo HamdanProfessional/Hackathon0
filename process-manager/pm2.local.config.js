@@ -23,7 +23,7 @@ module.exports = {
 
     {
       name: 'whatsapp-watcher',
-      script: './run_whatsapp_watcher.py',
+      script: './watchers/whatsapp_watcher_playwright.py',
       interpreter: 'python3',
       args: '--vault AI_Employee_Vault',
       cwd: './',
@@ -41,7 +41,7 @@ module.exports = {
 
     {
       name: 'filesystem-watcher',
-      script: './run_filesystem_watcher.py',
+      script: './watchers/filesystem_watcher.py',
       interpreter: 'python3',
       args: '--vault AI_Employee_Vault',
       cwd: './',

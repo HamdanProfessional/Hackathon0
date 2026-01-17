@@ -23,7 +23,7 @@ module.exports = {
 
     {
       name: 'gmail-watcher-cloud',
-      script: './run_gmail_watcher.py',
+      script: './watchers/gmail_watcher.py',
       interpreter: 'python3',
       args: '--vault AI_Employee_Vault --cloud-mode --draft-only',
       cwd: './',
@@ -43,7 +43,7 @@ module.exports = {
 
     {
       name: 'calendar-watcher-cloud',
-      script: './run_calendar_watcher.py',
+      script: './watchers/calendar_watcher.py',
       interpreter: 'python3',
       args: '--vault AI_Employee_Vault --cloud-mode',
       cwd: './',
@@ -62,7 +62,7 @@ module.exports = {
 
     {
       name: 'slack-watcher-cloud',
-      script: './run_slack_watcher.py',
+      script: './watchers/slack_watcher.py',
       interpreter: 'python3',
       args: '--vault AI_Employee_Vault --cloud-mode',
       cwd: './',
@@ -81,7 +81,7 @@ module.exports = {
 
     {
       name: 'odoo-watcher-cloud',
-      script: './run_odoo_watcher.py',
+      script: './watchers/odoo_watcher.py',
       interpreter: 'python3',
       args: '--vault AI_Employee_Vault --draft-only',
       cwd: './',
