@@ -261,7 +261,7 @@ def post_tweet(page, tweet_content, reply_to=None):
                         if human_click(page, selector, "Post button"):
                             posted = True
                             break
-                except Exception:
+                except (PlaywrightTimeoutError, Error):
                     continue
 
             if not posted:

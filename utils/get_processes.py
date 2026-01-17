@@ -6,6 +6,7 @@ Uses wmi command on Windows to track running processes.
 import subprocess
 import json
 import os
+import sys
 from datetime import datetime
 
 WATCHER_NAMES = [
@@ -68,7 +69,7 @@ def get_running_processes():
                         try:
                             mem_str = parts[4].strip() if len(parts) > 4 else '0'
                             memory = float(mem_str.replace(',', '')) if mem_str.replace(',', '') else 0
-                        except:
+                        except (ValueError, IndexError):
                             memory = 0
 
                         running.append({
@@ -100,7 +101,7 @@ def get_wmi_process_info(pid):
         if result.returncode == 0:
             return result.stdout.strip()
         return ""
-    except:
+    except (subprocess.SubprocessError, OSError):
         return ""
 
 if __name__ == '__main__':
@@ -122,7 +123,7 @@ if __name__ == '__main__':
         if result.returncode == 0:
             node_count = result.stdout.count('node.exe')
 
-    except:
+    except (subprocess.SubprocessError, OSError):
         pass
 
     print(f"\nDashboard Server: {'Running' if node_count > 0 else 'Not Detected'}")

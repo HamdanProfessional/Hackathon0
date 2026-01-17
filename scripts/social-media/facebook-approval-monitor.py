@@ -30,7 +30,7 @@ if sys.platform == 'win32':
         for arg in args:
             try:
                 safe_args.append(str(arg).encode('ascii', 'replace').decode('ascii'))
-            except:
+            except (UnicodeEncodeError, UnicodeDecodeError):
                 safe_args.append(str(arg))
         _original_print(*safe_args, **kwargs)
 

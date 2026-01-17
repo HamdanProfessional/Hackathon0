@@ -312,7 +312,7 @@ class GracefulDegradation:
     """
 
     def __init__(self, vault_path: str, component_name: str):
-        self.vault_path = Path(vault)
+        self.vault_path = Path(vault_path)
         self.component_name = component_name
         self.degraded = False
 
