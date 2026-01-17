@@ -23,9 +23,8 @@ module.exports = {
 
     {
       name: 'gmail-watcher-cloud',
-      script: './watchers/gmail_watcher.py',
-      interpreter: '/home/aiemployee/AI_EMPLOYEE_APP/venv/bin/python',
-      args: '--vault AI_Employee_Vault --cloud-mode --draft-only',
+      script: './venv/bin/python',
+      args: '-m watchers.gmail_watcher --vault AI_Employee_Vault --cloud-mode --draft-only',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -43,9 +42,8 @@ module.exports = {
 
     {
       name: 'calendar-watcher-cloud',
-      script: './watchers/calendar_watcher.py',
-      interpreter: '/home/aiemployee/AI_EMPLOYEE_APP/venv/bin/python',
-      args: '--vault AI_Employee_Vault --cloud-mode',
+      script: './venv/bin/python',
+      args: '-m watchers.calendar_watcher --vault AI_Employee_Vault --cloud-mode',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -62,9 +60,8 @@ module.exports = {
 
     {
       name: 'slack-watcher-cloud',
-      script: './watchers/slack_watcher.py',
-      interpreter: '/home/aiemployee/AI_EMPLOYEE_APP/venv/bin/python',
-      args: '--vault AI_Employee_Vault --cloud-mode',
+      script: './venv/bin/python',
+      args: '-m watchers.slack_watcher --vault AI_Employee_Vault --cloud-mode',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -81,9 +78,8 @@ module.exports = {
 
     {
       name: 'odoo-watcher-cloud',
-      script: './watchers/odoo_watcher.py',
-      interpreter: '/home/aiemployee/AI_EMPLOYEE_APP/venv/bin/python',
-      args: '--vault AI_Employee_Vault --draft-only',
+      script: './venv/bin/python',
+      args: '-m watchers.odoo_watcher --vault AI_Employee_Vault --draft-only',
       cwd: './',
       instances: 1,
       autorestart: true,
