@@ -24,7 +24,7 @@ module.exports = {
     {
       name: 'gmail-watcher-cloud',
       script: './venv/bin/python',
-      args: '-m watchers.gmail_watcher --vault AI_Employee_Vault --cloud-mode --draft-only',
+      args: '-m watchers.gmail_watcher --vault AI_Employee_Vault --dry-run',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -32,7 +32,6 @@ module.exports = {
       max_memory_restart: '500M',
       env: {
         CLOUD_MODE: 'true',
-        DRAFT_ONLY: 'true',
         PYTHONUNBUFFERED: '1'
       },
       error_file: './logs/cloud-gmail-watcher-error.log',
@@ -43,7 +42,7 @@ module.exports = {
     {
       name: 'calendar-watcher-cloud',
       script: './venv/bin/python',
-      args: '-m watchers.calendar_watcher --vault AI_Employee_Vault --cloud-mode',
+      args: '-m watchers.calendar_watcher --vault AI_Employee_Vault --dry-run',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -61,7 +60,7 @@ module.exports = {
     {
       name: 'slack-watcher-cloud',
       script: './venv/bin/python',
-      args: '-m watchers.slack_watcher --vault AI_Employee_Vault --cloud-mode',
+      args: '-m watchers.slack_watcher --vault AI_Employee_Vault --dry-run',
       cwd: './',
       instances: 1,
       autorestart: true,
