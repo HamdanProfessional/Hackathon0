@@ -104,16 +104,17 @@ module.exports = {
 
     {
       name: 'auto-approver-cloud',
-      script: './scripts/auto_approver.py',
+      script: './scripts/auto_approver_glm.py',
       interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --mode cloud',
+      args: '--vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
       watch: false,
       max_memory_restart: '500M',
       env: {
-        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+        GLM_API_KEY: process.env.GLM_API_KEY,
+        GLM_API_URL: process.env.GLM_API_URL || 'https://api.z.ai/api/paas/v4',
         CLOUD_MODE: 'true',
         PYTHONUNBUFFERED: '1'
       },
