@@ -79,14 +79,13 @@ module.exports = {
     {
       name: 'odoo-watcher-cloud',
       script: './venv/bin/python',
-      args: '-m watchers.odoo_watcher --vault AI_Employee_Vault --draft-only',
+      args: '-m watchers.odoo_watcher --vault AI_Employee_Vault --dry-run',
       cwd: './',
       instances: 1,
       autorestart: true,
       watch: false,
       max_memory_restart: '300M',
       env: {
-        ODOO_DRAFT_ONLY: 'true',
         PYTHONUNBUFFERED: '1'
       },
       error_file: './logs/cloud-odoo-watcher-error.log',
@@ -145,41 +144,7 @@ module.exports = {
     // VAULT SYNC (Pull from Local)
     // ============================================================
 
-    {
-      name: 'vault-sync-pull',
-      script: './scripts/vault_sync_pull.sh',
-      interpreter: '/bin/bash',
-      cwd: './',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      cron_restart: '*/2 * * * *',  // Every 2 minutes
-      error_file: './logs/vault-sync-pull-error.log',
-      out_file: './logs/vault-sync-pull-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    },
-
-    // ============================================================
-    // DASHBOARD UPDATE MERGER (Cloud -> Local)
-    // ============================================================
-
-    {
-      name: 'dashboard-update-merger',
-      script: './scripts/merge_dashboard_updates.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault',
-      cwd: './',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '200M',
-      cron_restart: '*/5 * * * *',  // Every 5 minutes
-      env: {
-        PYTHONUNBUFFERED: '1'
-      },
-      error_file: './logs/dashboard-merger-error.log',
-      out_file: './logs/dashboard-merger-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    }
+    // Vault sync and dashboard merger disabled for now
+    // Re-enable after setting up GitHub repo for vault sync
   ]
 };
