@@ -65,29 +65,37 @@ class AIApprover:
 When in doubt, require manual review. It's better to ask for approval than to make a mistake.
 """
 
-    def _ask_claude_for_decision(self, frontmatter: Dict, content: str, filepath: Path) -> str:
+    def _ask_claude_for_decision(self, frontmatter: Dict, content: str, filepath: Path) -> tuple:
         """
-        Ask Claude AI to make an approval decision.
+        Ask Claude AI to make an approval decision and optionally generate draft.
 
         Returns:
-            "approve" - Safe to auto-approve
-            "reject" - Unsafe, should be rejected
-            "manual" - Needs human review
+            (decision, draft_content) tuple where:
+            - decision: "approve", "reject", "manual", or "draft"
+            - draft_content: AI-generated draft if decision="draft", None otherwise
         """
         if not self.api_key:
             # Fallback to simple rules if no API key
-            return self._fallback_decision(frontmatter, content, filepath)
+            return (self._fallback_decision(frontmatter, content, filepath), None)
 
         try:
             import anthropic
 
-            client = anthropic.Anthropic(api_key=self.api_key)
+            # Support custom base URL for API compatibility
+            base_url = os.getenv('ANTHROPIC_BASE_URL', 'https://api.anthropic.com')
+            client = anthropic.Anthropic(api_key=self.api_key, base_url=base_url)
+
+            action_type = frontmatter.get('type', '').lower()
+            is_email = action_type == 'email'
+            is_social = action_type in ['linkedin_post', 'twitter_post', 'instagram_post', 'facebook_post']
+            needs_draft = is_email or is_social
 
             # Build prompt with context
-            prompt = f"""You are an AI assistant that decides whether to auto-approve actions based on company rules.
+            if needs_draft:
+                prompt = f"""You are an AI assistant that reviews action items and decides how to handle them.
 
 # COMPANY HANDBOOK RULES
-{self.handbook_rules[:3000]}  # First 3000 chars of rules
+{self.handbook_rules[:3000]}
 
 # ACTION TO EVALUATE
 Type: {frontmatter.get('type', 'unknown')}
@@ -97,7 +105,46 @@ From: {frontmatter.get('from', 'unknown')}
 Subject: {frontmatter.get('subject', 'N/A')}
 
 # CONTENT
-{content[:2000]}  # First 2000 chars
+{content[:2000]}
+
+# YOUR TASK
+Decide the appropriate action and generate a draft if needed.
+
+Return your decision as a JSON object with these fields:
+- action: One of:
+  * "approve" - Safe, known contact, routine file operations, Slack/WhatsApp messages
+  * "reject" - Scams, phishing, dangerous requests, spam
+  * "manual" - Requires human judgment (payments, new contacts, sensitive topics) - NO draft needed
+  * "draft" - Email replies or social media posts that need AI-generated draft for human review
+- reason: brief explanation of your decision
+- draft_content: (REQUIRED if action="draft", otherwise null) AI-generated response
+
+For action="draft":
+- Email replies: Professional tone, concise, addresses sender's points, under 200 words
+- LinkedIn posts: Professional, 1-3 paragraphs, include 3-5 relevant hashtags
+- Twitter posts: Under 280 chars, concise, include 2-3 hashtags
+- Instagram posts: Engaging caption style, include 5-10 hashtags
+- Facebook posts: Conversational, engaging, include 3-5 hashtags
+
+Respond ONLY with valid JSON (no markdown, no code blocks).
+"""
+                max_tokens = 500
+                temperature = 0.7
+            else:
+                prompt = f"""You are an AI assistant that decides whether to auto-approve actions based on company rules.
+
+# COMPANY HANDBOOK RULES
+{self.handbook_rules[:3000]}
+
+# ACTION TO EVALUATE
+Type: {frontmatter.get('type', 'unknown')}
+Service: {frontmatter.get('service', 'unknown')}
+Priority: {frontmatter.get('priority', 'normal')}
+From: {frontmatter.get('from', 'unknown')}
+Subject: {frontmatter.get('subject', 'N/A')}
+
+# CONTENT
+{content[:2000]}
 
 # YOUR TASK
 Decide: approve, reject, or manual
@@ -109,29 +156,55 @@ Rules:
 
 Respond with ONLY ONE WORD: approve, reject, or manual
 """
+                max_tokens = 10
+                temperature = 0
 
             message = client.messages.create(
                 model="claude-3-haiku-20240307",
-                max_tokens=10,
-                temperature=0,
+                max_tokens=max_tokens,
+                temperature=temperature,
                 messages=[{
                     "role": "user",
                     "content": prompt
                 }]
             )
 
-            decision = message.content[0].text.strip().lower()
+            response_text = message.content[0].text.strip()
 
-            # Validate response
-            if decision in ["approve", "reject", "manual"]:
-                return decision
+            # Parse response based on whether we expected a draft
+            if needs_draft:
+                # Parse JSON response
+                try:
+                    import json
+                    # Remove markdown code blocks if present
+                    if response_text.startswith('```'):
+                        response_text = response_text.split('```', 2)[1].strip()
+                        if response_text.startswith('json'):
+                            response_text = response_text[4:].strip()
+
+                    result = json.loads(response_text)
+                    decision = result.get('action', 'manual').lower()
+                    draft_content = result.get('draft_content')
+
+                    if decision not in ["approve", "reject", "manual", "draft"]:
+                        print(f"[WARNING] Claude returned unexpected decision: {decision}")
+                        return ("manual", None)
+
+                    return (decision, draft_content)
+                except (json.JSONDecodeError, KeyError) as e:
+                    print(f"[WARNING] Failed to parse AI response: {e}")
+                    return ("manual", None)
             else:
-                print(f"[WARNING] Claude returned unexpected decision: {decision}")
-                return "manual"  # Default to manual review
+                decision = response_text.lower()
+                if decision in ["approve", "reject", "manual"]:
+                    return (decision, None)
+                else:
+                    print(f"[WARNING] Claude returned unexpected decision: {decision}")
+                    return ("manual", None)
 
         except Exception as e:
             print(f"[WARNING] AI decision failed: {e}, using fallback")
-            return self._fallback_decision(frontmatter, content, filepath)
+            return (self._fallback_decision(frontmatter, content, filepath), None)
 
     def _fallback_decision(self, frontmatter: Dict, content: str, filepath: Path) -> str:
         """Fallback rule-based decision if AI is unavailable."""
@@ -177,6 +250,7 @@ Respond with ONLY ONE WORD: approve, reject, or manual
         """
         results = {
             "auto_approved": 0,
+            "drafted": 0,
             "requires_approval": 0,
             "rejected": 0,
             "errors": 0
@@ -192,9 +266,9 @@ Respond with ONLY ONE WORD: approve, reject, or manual
                 frontmatter = self._extract_frontmatter(filepath)
 
                 if frontmatter.get("status") == "pending":
-                    # Ask AI for decision
+                    # Ask AI for decision (returns tuple now)
                     print(f"\n[AI] Analyzing: {filepath.name}")
-                    decision = self._ask_claude_for_decision(frontmatter, content, filepath)
+                    decision, draft_content = self._ask_claude_for_decision(frontmatter, content, filepath)
 
                     print(f"[AI] Decision: {decision.upper()}")
 
@@ -210,7 +284,20 @@ Respond with ONLY ONE WORD: approve, reject, or manual
                         results["rejected"] += 1
                         print(f"[REJECTED] {filepath.name} - unsafe action")
 
-                    else:
+                    elif decision == "draft":
+                        # Generate draft and move to Pending_Approval/
+                        if draft_content:
+                            self._create_draft_with_content(filepath, frontmatter, draft_content)
+                            results["drafted"] += 1
+                            print(f"[AI-DRAFT] {filepath.name} - AI-generated draft created")
+                        else:
+                            # Fallback to manual review if draft generation failed
+                            dest = self.pending_approval / filepath.name
+                            shutil.move(str(filepath), str(dest))
+                            results["requires_approval"] += 1
+                            print(f"[MANUAL REVIEW] {filepath.name} - draft generation failed")
+
+                    else:  # manual
                         # Requires manual approval - move to Pending_Approval
                         dest = self.pending_approval / filepath.name
                         shutil.move(str(filepath), str(dest))
@@ -244,6 +331,27 @@ Respond with ONLY ONE WORD: approve, reject, or manual
         filepath.unlink()
 
         print(f"   → Auto-approved and moved to Approved/")
+
+    def _create_draft_with_content(self, filepath: Path, frontmatter: Dict, draft_content: str):
+        """Create a draft with AI-generated content and move to Pending_Approval/."""
+        # Update frontmatter with draft information
+        frontmatter["status"] = "pending_approval"
+        frontmatter["draft_content"] = draft_content
+        frontmatter["draft_generated_at"] = datetime.now().isoformat()
+        frontmatter["draft_generated_by"] = "AI (Claude)"
+
+        # Read original content
+        content = filepath.read_text(encoding='utf-8')
+
+        # Update frontmatter with draft
+        updated_content = self._update_frontmatter(content, frontmatter)
+
+        # Write to Pending_Approval folder
+        dest = self.pending_approval / filepath.name
+        dest.write_text(updated_content, encoding='utf-8')
+
+        # Delete from Needs_Action
+        filepath.unlink()
 
     def _extract_frontmatter(self, filepath: Path) -> Dict:
         """Extract YAML frontmatter from markdown file, or create metadata for plain text files."""
@@ -328,6 +436,7 @@ def main():
         print("RESULTS")
         print("="*60)
         print(f"Auto-approved: {results['auto_approved']}")
+        print(f"AI-drafted: {results['drafted']}")
         print(f"Requires manual review: {results['requires_approval']}")
         print(f"Rejected: {results['rejected']}")
         print(f"Errors: {results['errors']}")
