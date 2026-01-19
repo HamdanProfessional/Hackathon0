@@ -116,7 +116,7 @@ module.exports = {
     {
       name: 'auto-approver',
       script: path.join(PROJECT_ROOT, '.claude', 'skills', 'approval-manager', 'scripts', 'auto_approver.py'),
-      args: '--vault ' + VAULT_PATH + ' --mode cloud-draft',
+      args: '--vault ' + VAULT_PATH,
       cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
@@ -124,7 +124,8 @@ module.exports = {
       max_restarts: 10,
       max_memory_restart: '500M',
       env: {
-        'ANTHROPIC_API_KEY': process.env.ANTHROPIC_API_KEY,
+        'ANTHROPIC_API_KEY': 'c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM',
+        'ANTHROPIC_BASE_URL': 'https://api.z.ai/api/coding/paas/v4',
         'PYTHONPATH': PROJECT_ROOT,
         'PYTHONUNBUFFERED': '1',
         'PYTHONIOENCODING': 'utf-8',
