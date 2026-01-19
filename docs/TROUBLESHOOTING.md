@@ -1,591 +1,463 @@
 # Troubleshooting Guide
 
-**Having issues?** This guide covers the most common problems and solutions.
+**AI Employee v1.4.1**
 
 ---
 
-## 🔍 Quick Diagnosis
+## Table of Contents
 
-### Step 1: Check System Status
-```bash
+- [System Issues](#system-issues)
+- [Watchers](#watchers)
+- [Approval Monitors](#approval-monitors)
+- [Social Media](#social-media)
+- [Chrome Automation](#chrome-automation)
+- [PM2](#pm2)
+- [Common Errors](#common-errors)
+
+---
+
+## System Issues
+
+### PM2 shows 0 processes running
+
+**Symptom:**
+```
 pm2 status
+┌────┬───────────┬─────────┬──────────┐
+│ id │ name      │ status │ ...     │
+└────┴───────────┴─────────┴──────────┘
+(empty table)
 ```
 
-**What to look for:**
-- All processes should show "online" status
-- "errored" or "stopped" means problems
-- High restart counts (↺ column) indicates crashes
+**Solution:**
 
-### Step 2: Check Recent Logs
 ```bash
-pm2 logs --lines 50 --err
-```
-
-### Step 3: Verify Chrome Automation
-```bash
-netstat -ano | findstr :9222
-```
-**Should show:** `LISTENING` with a PID
-
----
-
-## 🚨 Common Issues & Solutions
-
-### Issue 1: Services Won't Start
-
-**Symptoms:**
-- `pm2 start` fails
-- Processes show "errored"
-- High restart counts
-
-**Solutions:**
-
-#### A. PM2 Daemon Issue
-```bash
-# Kill PM2 daemon
-pm2 kill
-
-# Start fresh
+# Start PM2 processes
 pm2 start process-manager/pm2.config.js
+
+# Wait and check status
+pm2 status
+
+# If errors, check logs
+pm2 logs --err
 ```
 
-#### B. Missing Dependencies
-```bash
-# Install Python packages
-pip install anthropic pyyaml playwright
+### All processes showing "errored"
 
-# Install PM2 globally
-npm install -g pm2
+**Symptom:**
+```
+│ id │ name      │ status │ ...     │
+│ 18 │ dashboard│ errored │ ...     │
 ```
 
-#### C. Port Already in Use
+**Solution:**
+
 ```bash
-# Check what's using port 3000
-netstat -ano | findstr :3000
+# Check error logs
+pm2 logs dashboard --err
 
-# Kill the process or use different port
-# Edit dashboard/server.js to change PORT variable
-```
+# Common issue: Dashboard port 3000 already in use
+# Kill process on port 3000 or change port in config
 
----
-
-### Issue 2: Chrome Automation Not Working
-
-**Symptoms:**
-- Social media posts fail
-- Error: "Chrome CDP not available"
-- Posts not executing
-
-**Solutions:**
-
-#### A. Chrome Not Running with CDP
-```bash
-# Close all Chrome windows
-
-# Restart with batch file
-scripts\social-media\START_AUTOMATION_CHROME.bat
-
-# Or manually:
-"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="C:\Users\User\ChromeAutomationProfile"
-```
-
-#### B. Wrong Chrome Profile
-```bash
-# Close Chrome, delete old profile
-rmdir /s "C:\Users\User\ChromeAutomationProfile"
-
-# Restart with batch file
-scripts\social-media\START_AUTOMATION_CHROME.bat
-
-# Log into platforms again
-```
-
-#### C. Port 9222 Blocked
-```bash
-# Check what's using port 9222
-netstat -ano | findstr :9222
-
-# Kill the process or use different port
-# Edit social-media posters to use different port
-```
-
----
-
-### Issue 3: Not Detecting Emails/Calendar
-
-**Symptoms:**
-- Watcher running but no files created
-- No new items in Needs_Action/
-- MCP not responding
-
-**Solutions:**
-
-#### A. Token Expired
-```bash
-# Delete old token
-rm mcp-servers/email-mcp/.gmail_mcp_token.json
-
-# Re-authenticate
-cd mcp-servers/email-mcp
-npm run authenticate
-```
-
-#### B. Wrong Credentials Path
-```bash
-# Check PM2 config uses correct path
-pm2 show gmail-watcher
-
-# Should show:
-# args: --vault AI_Employee_Vault --credentials mcp-servers/email-mcp/credentials.json
-```
-
-#### C. Gmail API Not Enabled
-```bash
-# Enable Gmail API
-# Visit: https://console.cloud.google.com/apis/api/gmail.googleapis.com/overview
-
-# Check MCP config
-cat mcp-servers/email-mcp/package.json
-# Look for "scopes": ["https://www.googleapis.com/auth/gmail.readonly"]
-```
-
-#### D. Test MCP Directly
-```bash
-cd mcp-servers/email-mcp
-node test-email.js
-```
-
----
-
-### Issue 4: Social Media Posts Failing
-
-**Symptoms:**
-- Posts created but not executing
-- Error: "Element not found"
-- Posts stuck in Approved/
-
-**Solutions:**
-
-#### A. Not Logged In
-```bash
-# Open Chrome automation window
-# Check if logged into platform
-# Log in if needed
-```
-
-#### B. Wrong Content Extraction
-```bash
-# Check post file
-cat AI_Employee_Vault/Approved/LINKEDIN_POST_*.md
-
-# Should have content between ``` marks
-# If metadata included, see docs/SOCIAL_MEDIA_GUIDE.md
-```
-
-#### C. Platform Changed UI
-```bash
-# Check platform for UI changes
-# May need to update selectors in scripts/social-media/*_poster.py
-# Look for elements: .global-nav__me, [aria-label="Post"], etc.
-```
-
-#### D. Network Timeout
-```bash
-# Check internet connection
-# Increase timeout in poster script
-# Edit: timeout=180000 (3 minutes)
-```
-
----
-
-### Issue 5: AI Auto-Approver Not Working
-
-**Symptoms:**
-- Items stay in Needs_Action/
-- No AI decisions being made
-- Error: "ANTHROPIC_API_KEY not set"
-
-**Solutions:**
-
-#### A. API Key Not Set
-```bash
-# Check if API key is set
-pm2 show auto-approver
-
-# Set API key
-setx ANTHROPIC_API_KEY "your-api-key-here"
-
-# Restart with new env variable
-pm2 restart auto-approver --update-env
-```
-
-#### B. API Key Invalid
-```bash
-# Verify API key works
-curl https://api.anthropic.com/v1/messages \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -H "content-type: application/json" \
-  -d '{"model":"claude-3-haiku-20240307","max_tokens":10,"messages":[{"role":"user","content":"hi"}]}'
-```
-
-#### C. Using Fallback Mode
-```bash
-# Check logs
-pm2 logs auto-approver
-
-# Look for: "AI decision failed: ... using fallback"
-# Without API key, uses rule-based decisions (less smart)
-```
-
-#### D. Anthropic Account Issues
-```bash
-# Check API key at: https://console.anthropic.com/settings/keys
-# Verify:
-# - Key is active
-# - Has credits available
-# - Correct permissions enabled
-```
-
----
-
-### Issue 6: Vault Folder Problems
-
-**Symptoms:**
-- Files not being created
-- Wrong folder paths
-- Permission errors
-
-**Solutions:**
-
-#### A. Wrong Vault Path
-```bash
-# Check PM2 config
-grep "vault" process-manager/pm2.config.js
-
-# Should be: --vault AI_Employee_Vault
-# NOT: --vault vault or --vault ./vault
-```
-
-#### B. Folder Not Created
-```bash
-# Create folders manually
-mkdir AI_Employee_Vault\Inbox
-mkdir AI_Employee_Vault\Needs_Action
-mkdir AI_Employee_Vault\Pending_Approval
-mkdir AI_Employee_Vault\Approved
-mkdir AI_Employee_Vault\Rejected
-mkdir AI_Employee_Vault\Done
-mkdir AI_Employee_Vault\Briefings
-mkdir AI_Employee_Vault\Plans
-mkdir AI_Employee_Vault\Logs
-mkdir AI_Employee_Vault\Templates
-mkdir AI_Employee_Vault\Accounting
-```
-
-#### C. Windows Path Issues
-```bash
-# Use forward slashes in Python scripts
-# Wrong: C:\Users\...
-# Correct: C:/Users/... or use raw strings: r"C:\Users\..."
-
-# In PM2 config, double backslashes are OK
-# args: "--vault C:\\Users\\User\\Desktop\\AI_EMPLOYEE_APP\\AI_Employee_Vault"
-```
-
----
-
-### Issue 7: Dashboard Not Accessible
-
-**Symptoms:**
-- Can't access http://localhost:3000
-- Dashboard shows errors
-- Data not loading
-
-**Solutions:**
-
-#### A. Dashboard Not Running
-```bash
-pm2 status | grep dashboard
-
-# If stopped/errored:
+# Restart specific process
 pm2 restart ai-employee-dashboard
 ```
 
-#### B. Port 3000 Blocked
-```bash
-# Check what's using port 3000
-netstat -ano | findstr :3000
+### Processes keep restarting
 
-# Kill the process or change port
-# Edit dashboard/server.js: const PORT = process.env.PORT || 3001
+**Symptom:**
+```
+│ id │ name      │ ↺  │
+│  5 │ watcher   │ 10+ │ (high restart count)
 ```
 
-#### C. CORS Errors
+**Solution:**
+
 ```bash
-# Check dashboard is served from correct origin
-# Should be http://localhost:3000
-# Not file:// protocol
-```
+# Check error logs
+pm2 logs name --err --lines 50
 
----
-
-### Issue 8: High Memory Usage
-
-**Symptoms:**
-- Processes consuming lots of RAM
-- System running slowly
-- PM2 shows high memory usage
-
-**Solutions:**
-
-#### A. Restart Heavy Processes
-```bash
-pm2 restart gmail-watcher
-pm2 restart odoo-watcher
-pm2 restart ai-employee-dashboard
-```
-
-#### B. Configure Memory Limits
-```bash
-# Edit PM2 config
-# Add: max_memory_restart: "500M"
-
-# Apply changes
-pm2 restart all
-```
-
-#### C. Clean Up Logs
-```bash
-# Run log cleanup
-pm2 start audit-log-cleanup
-# Or manually:
-rm AI_Employee_Vault/Logs/2025-*.json
+# Common fixes:
+# 1. Fix Python path issues
+# 2. Fix import errors
+# 3. Reset restart count
+pm2 reset name
 ```
 
 ---
 
-### Issue 9: Files Stuck in Approved/
+## Watchers
 
-**Symptoms:**
-- Files in Approved/ not executing
-- Approval monitors not detecting files
-- No errors in logs
+### Gmail Watcher not creating files
 
-**Solutions:**
+**Symptom:** No new files in `Needs_Action/`
 
-#### A. Monitor Not Running
+**Debug:**
+
 ```bash
-pm2 status | grep approval-monitor
+# Check if watcher is running
+pm2 logs gmail-watcher --lines 20
 
-# Should show: linkedin-approval-monitor, twitter-approval-monitor, etc.
+# Test manually
+python -m watchers.gmail_watcher --vault AI_Employee_Vault --once
 ```
 
-#### B. File Format Wrong
-```bash
-# Check file has correct frontmatter
-head -20 AI_Employee_Vault/Approved/LINKEDIN_POST_*.md
+**Common Fixes:**
 
-# Should have:
-# ---
-# type: linkedin_post
-# platform: linkedin
-# ---
+1. **Check OAuth token**
+   - Delete `.gmail_token.json`
+   - Re-run watcher to initiate OAuth flow
+
+2. **Check credentials**
+   ```bash
+   ls mcp-servers/email-mcp/credentials.json
+   ```
+
+3. **Check API quota**
+   - Wait and try again
+
+### Calendar Watcher not working
+
+**Symptom:** No calendar files created
+
+**Debug:**
+
+```bash
+pm2 logs calendar-watcher --lines 20
+python -m watchers.calendar_watcher --vault AI_Employee_Vault --once
 ```
 
-#### C. Already Processed
-```bash
-# Check if file was already processed
-ls AI_Employee_Vault/Done/LINKEDIN_POST_*.md
+**Fix:** Delete `.calendar_token.json` and re-authenticate
 
-# If in Done/, already processed
+### Slack Watcher not monitoring
+
+**Symptom:** Slack messages not detected
+
+**Debug:**
+
+```bash
+pm2 logs slack-watcher --lines 20
 ```
 
-#### D. Force Re-processing
+**Fix:** Check bot token:
 ```bash
-# Move from Approved/ back to Needs_Action/
-mv AI_Employee_Vault/Approved/LINKEDIN_POST_*.md AI_Employee_Vault/Needs_Action/
-
-# AI will re-analyze and move to correct folder
-```
-
----
-
-### Issue 10: Duplicate Entries
-
-**Symptoms:**
-- Same email creating multiple files
-- Duplicate calendar entries
-- Multiple monitors processing same file
-
-**Solutions:**
-
-#### A. Check processed_files Tracking
-```bash
-# Monitor logs for "Already processed" messages
-pm2 logs gmail-watcher | grep "Already processed"
-```
-
-#### B. Clear processed_files Set
-```bash
-# Restart watcher
-pm2 restart gmail-watcher
-# Clears in-memory tracking
-```
-
-#### C. Check Multiple Watchers Running
-```bash
-pm2 status | grep watcher
-# Should only have one of each type
+echo $SLACK_BOT_TOKEN
 ```
 
 ---
 
-## 🔧 Advanced Troubleshooting
+## Approval Monitors
 
-### Enable Debug Logging
+### Files stuck in Approved/ folder
 
-#### For Watchers
+**Symptom:** Files in `Approved/` not being processed
+
+**Debug:**
+
 ```bash
-# Run manually with verbose output
-python -m watchers.gmail_watcher --vault AI_Employee_Vault --once --debug
+# Check monitor logs
+pm2 logs linkedin-approval-monitor --lines 50
 ```
 
-#### For AI Auto-Approver
+**Common Fixes:**
+
+1. **Chrome CDP not running**
+   ```bash
+   curl http://localhost:9222/json/version
+   # If error, start: start_chrome.bat
+   ```
+
+2. **Not logged in**
+   - Open Chrome automation window
+   - Navigate to platform
+   - Log in manually
+
+3. **Monitor crashed**
+   ```bash
+   pm2 restart linkedin-approval-monitor
+   ```
+
+### Auto-approver making wrong decisions
+
+**Symptom:** Items auto-approved when should be manual
+
+**Debug:**
+
 ```bash
-# Run manually to see AI decisions
-python scripts/auto_approver.py --vault AI_Employee_Vault --once
+pm2 logs auto-approver --lines 50
 ```
 
-### Check System Resources
+**Fix:** Adjust criteria in auto_approver.py or move to manual-only mode
 
-#### CPU/Memory
-```bash
-# Task Manager (Windows)
-# Look for python.exe processes
-# Check for high CPU/memory usage
+---
+
+## Social Media
+
+### LinkedIn post not appearing
+
+**Symptom:** Post approved but not showing on LinkedIn
+
+**Checklist:**
+
+1. **Chrome CDP running?**
+   ```bash
+   curl http://localhost:9222/json/version
+   ```
+
+2. **Logged into LinkedIn?**
+   - Check Chrome automation window
+   - Navigate to linkedin.com
+   - Verify logged in state
+
+3. **Dry-run mode off?**
+   ```bash
+   echo $LINKEDIN_DRY_RUN  # Should be "false"
+   ```
+
+4. **Monitor status:**
+   ```bash
+   pm2 logs linkedin-approval-monitor --lines 50
+   ```
+
+### Instagram post failing
+
+**Symptom:** Error when posting to Instagram
+
+**Fixes:**
+
+1. **Image generation failed**
+   - Check permissions
+   - Verify PIL/Pillow installed
+
+2. **Caption too long**
+   - Instagram limit: 2,200 characters
+
+3. **Not logged in**
+   - Open Chrome automation
+   - Log into instagram.com
+
+### Twitter post truncated
+
+**Symptom:** Post cut off at 280 characters
+
+**This is expected behavior.** Twitter limit is 280 characters.
+
+---
+
+## Chrome Automation
+
+### Chrome CDP port 9222 not available
+
+**Symptom:**
+```
+curl http://localhost:9222/json/version
+curl: (7) Failed to connect
 ```
 
-#### Disk Space
-```bash
-# Check vault size
-du -sh AI_Employee_Vault
+**Fix:**
 
-# Check logs size
-du -sh AI_Employee_Vault/Logs
+```bash
+# Kill all Chrome processes
+taskkill /F /IM chrome.exe /T
+
+# Start Chrome CDP
+start_chrome.bat
+
+# Verify
+curl http://localhost:9222/json/version
 ```
 
-### Reset Everything
+### Chrome opens wrong profile
 
-#### Nuclear Option (Use as Last Resort)
+**Symptom:** Chrome opens to a different user profile
+
+**Fix:** Check path in `start_chrome.bat`:
+```batch
+chrome.exe "--user-data-dir=C:\Users\User\AppData\Local\Google\Chrome\User Data" --remote-debugging-port=9222
+```
+
+**Note:** Quote the ENTIRE parameter including flag name, not just path.
+
+### Chrome not logging in
+
+**Symptom:** Need to log in every time Chrome restarts
+
+**Fix:** Save Chrome user data after logging in once. Chrome should preserve session.
+
+---
+
+## PM2
+
+### Module not found errors
+
+**Symptom:**
+```
+ModuleNotFoundError: No module named 'watchers'
+```
+
+**Fixes:**
+
+1. **Check PYTHONPATH in PM2 config**
+   ```javascript
+   env: {
+     PYTHONPATH: path.join(PROJECT_ROOT)
+   }
+   ```
+
+2. **Restart process**
+   ```bash
+   pm2 restart process-name
+   ```
+
+### Process exit code 1
+
+**Symptom:** Process exits immediately
+
+**Debug:**
+
 ```bash
-# Stop everything
-pm2 kill
+pm2 logs process-name --err
+```
 
-# Clear PM2 state
-pm2 flush
+**Common Fixes:**
 
-# Delete PM2 ecosystem
-pm2 delete all
+1. **Script not found** - Check file path in PM2 config
+2. **Import error** - Fix Python imports
+3. **Permission denied** - Check file permissions
+
+### PM2 daemon not running
+
+**Symptom:**
+```
+PM2 Error: PM2 not running
+```
+
+**Fix:**
+
+```bash
+# Kill existing PM2 daemon
+taskkill /F /IM pm2.exe /T
 
 # Start fresh
 pm2 start process-manager/pm2.config.js
+pm2 save
 ```
 
 ---
 
-## 📞 Getting More Help
+## Common Errors
+
+### `KeyError: 'ANTHROPIC_API_KEY'`
+
+**Cause:** Environment variable not set
+
+**Fix:**
+
+```bash
+# Set in current session
+export ANTHROPIC_API_KEY=your-key-here
+
+# Add to PM2 config for persistence
+# Add to env section in pm2.config.js:
+# "ANTHROPIC_AUTH_TOKEN": "your-key-here"
+```
+
+### `PermissionError: [Errno 13] Permission denied`
+
+**Cause:** Vault folder not writable
+
+**Fix:**
+
+```bash
+# Check permissions
+ls -la AI_Employee_Vault/
+
+# Fix permissions
+chmod -R u+rw AI_Employee_Vault/
+```
+
+### `ModuleNotFoundError: No module named 'skills'`
+
+**Cause:** Wrong Python path calculation
+
+**Fix:** Scripts in `.claude/skills/skill-name/scripts/` need to go up 5 levels to project root
+
+### `OSError: [Errno 2] No such file or directory`
+
+**Cause:** Vault folder doesn't exist
+
+**Fix:**
+
+```bash
+# Create vault folder
+mkdir -p AI_Employee_Vault
+mkdir -p AI_Employee_Vault/{Needs_Action,Pending_Approval,Approved,Rejected,Done,Plans,Logs,Briefings}
+```
+
+---
+
+## Getting Help
 
 ### Check Logs First
+
+Always check logs before debugging:
+
 ```bash
-# All logs
+# System logs
 pm2 logs
+
+# Specific process
+pm2 logs process-name
 
 # Error logs only
 pm2 logs --err
-
-# Specific service
-pm2 logs gmail-watcher --lines 100
-
-# Recent logs
-pm2 logs --lines 50
 ```
 
-### Collect Diagnostic Info
-```bash
-# System status
-pm2 status > status.txt
+### Documentation
 
-# Recent errors
-pm2 logs --err --lines 100 > errors.txt
+- `README.md` - Main documentation
+- `ARCHITECTURE.md` - System architecture
+- `QUICKSTART.md` - Quick start guide
+
+### Support
+
+1. Check this guide
+2. Check system logs
+3. Check main README
+4. Review architecture docs
+
+---
+
+## Still Stuck?
+
+### Reset Everything
+
+```bash
+# Stop all
+pm2 delete all
+
+# Clear Python cache
+find . -name "*.pyc" -delete
+find . -name "__pycache__" -type d -exec rm -rf {} +
+
+# Start fresh
+pm2 start process-manager/pm2.config.js
+pm2 save
+```
+
+### Get System Status
+
+```bash
+# PM2 status
+pm2 status
 
 # Vault contents
-ls -R AI_Employee_Vault/ > vault_contents.txt
+ls AI_Employee_Vault/
 
-# Chrome CDP
-netstat -ano | findstr :9222 > chrome_cdp.txt
-
-# Token files
-ls -la mcp-servers/*_mcp/*.json > tokens.txt
-
-# Send all these when asking for help
+# Recent logs
+tail -50 AI_Employee_Vault/Logs/*.json
 ```
 
-### Common Error Messages
-
-#### "Chrome CDP not available"
-→ Chrome not running with --remote-debugging-port=9222
-→ See Issue 2 above
-
-#### "Gmail API error"
-→ Token expired or API not enabled
-→ See Issue 3 above
-
-#### "Module not found"
-→ Missing Python dependency
-→ Run: pip install anthropic pyyaml
-
-#### "ENOENT: no such file or directory"
-→ Wrong vault path
-→ Check PM2 config vault path
-
-#### "Permission denied"
-→ Windows folder permissions
-→ Run as Administrator or fix folder permissions
-
 ---
 
-## 📚 Additional Resources
-
-- **[START_HERE.md](START_HERE.md)** - New user guide
-- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Setup instructions
-- **[USER_GUIDE.md](USER_GUIDE.md)** - Daily usage
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical details
-- **[SECURITY.md](SECURITY.md)** - Security model
-
----
-
-## 🎯 Prevention Tips
-
-### Regular Maintenance
-1. **Weekly:** Check logs for errors
-2. **Monthly:** Clean up old Done/ files
-3. **Quarterly:** Review and update Company_Handbook.md
-4. **As needed:** Update API keys and tokens
-
-### Best Practices
-1. **Always test** with --dry-run first for social media
-2. **Review changes** before updating PM2 config
-3. **Backup vault** before major changes
-4. **Keep Chrome automation** logged in to platforms
-5. **Monitor costs** (API usage, system resources)
-
-### Stay Updated
-- Check `CLAUDE.md` for latest system info
-- Review `CHANGELOG.md` for recent changes
-- Update documentation when making changes
-
----
-
-*Last Updated: 2026-01-17*
-*System Version: v1.3.0*
+**Last Updated:** 2025-01-19

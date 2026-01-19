@@ -1,0 +1,17 @@
+{
+  "name": "instagram-mcp-server",
+  "version": "1.0.0",
+  "description": "Instagram MCP server - Post to Instagram via Model Context Protocol",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["mcp", "instagram", "social-media", "automation"],
+  "author": "AI Employee",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "playwright": "^1.48.0"
+  }
+}

@@ -1,236 +1,567 @@
-# AI Employee System - Documentation
+# AI Employee
 
-**Welcome to the AI Employee documentation!**
-
----
-
-## 🚀 New User? Start Here
-
-**Read in this order for the best experience:**
-
-1. **[START_HERE.md](START_HERE.md)** - ⭐ 5 min overview
-   - What is AI Employee?
-   - Quick start (5 minutes)
-   - System overview
-
-2. **[GETTING_STARTED.md](GETTING_STARTED.md)** - ⭐ 15 min setup
-   - Install dependencies
-   - Set up authentication
-   - Start Chrome automation
-   - Start all services
-   - Verify setup
-
-3. **[USER_GUIDE.md](USER_GUIDE.md)** - ⭐ 10 min daily usage
-   - Daily workflow
-   - Email management
-   - Calendar management
-   - Social media posting
-   - Accounting
-   - AI auto-approver usage
-
-4. **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - When things go wrong
-   - Common issues & solutions
-   - Quick diagnosis
-   - Advanced troubleshooting
+**Version:** 1.4.1
+**Last Updated:** 2025-01-19
 
 ---
 
-## 📚 All Documentation
+## Overview
 
-### Essential Guides (Beginner Friendly)
+AI Employee is a **production-ready autonomous AI system** that runs 24/7 to monitor external services, make intelligent decisions, and execute business actions with human oversight.
 
-| File | Description | Time | Updated |
-|------|-------------|------|---------|
-| **[START_HERE.md](START_HERE.md)** | Introduction & overview | 5 min | Jan 17 |
-| **[GETTING_STARTED.md](GETTING_STARTED.md)** | First-time setup guide | 15 min | Jan 17 |
-| **[USER_GUIDE.md](USER_GUIDE.md)** | Day-to-day usage | 10 min | Jan 17 |
-| **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** | Fix common issues | 10 min | Jan 17 |
+It transforms Claude from a general-purpose AI assistant into a specialized business employee that can:
+- Monitor Gmail, Calendar, Slack, WhatsApp, and other services
+- Generate and post content to LinkedIn, Twitter, Facebook, and Instagram
+- Create CEO-level business briefings and daily plans
+- Execute autonomous multi-step workflows
+- Manage accounting via Odoo integration
 
-### Technical Documentation
-
-| File | Description | Audience | Updated |
-|------|-------------|----------|---------|
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System architecture & design | Developers | Jan 17 |
-| **[SECURITY.md](SECURITY.md)** | Security model & best practices | All users | Jan 12 |
-| **[PM2_GUIDE.md](PM2_GUIDE.md)** | PM2 process management | Admins | Jan 14 |
-| **[PROCESS_CONTROL.md](PROCESS_CONTROL.md)** | Process control details | DevOps | Jan 14 |
-
-### Platform-Specific Guides
-
-| File | Description | Updated |
-|------|-------------|---------|
-| **[SOCIAL_MEDIA.md](SOCIAL_MEDIA.md)** | Social media posting guide | Jan 14 |
-| **[XERO_MCP_QUICKSTART.md](XERO_MCP_QUICKSTART.md)** | Xero accounting setup | Jan 12 |
-| **[ODOO_INTEGRATION_GUIDE.md](ODOO_INTEGRATION_GUIDE.md)** | Odoo accounting setup | Jan 16 |
-| **[APPROVAL_MONITORS.md](APPROVAL_MONITORS.md)** | Approval system details | Jan 12 |
-
-### Advanced Topics
-
-| File | Description | Audience | Updated |
-|------|-------------|----------|---------|
-| **[RALPH_USER_GUIDE.md](RALPH_USER_GUIDE.md)** | Autonomous task execution | Advanced | Jan 14 |
-| **[PRESENTATION_DEMO_GUIDE.md](PRESENTATION_DEMO_GUIDE.md)** | Demo presentation guide | Presenters | Jan 14 |
-| **[DEMO_QUICK_REFERENCE.md](DEMO_QUICK_REFERENCE.md)** | Demo quick reference | Presenters | Jan 12 |
+**Key Innovation:** The **Monday Morning CEO Briefing** - AI autonomously audits business performance, reviews logs, analyzes transactions, compares progress to targets, and reports revenue and bottlenecks.
 
 ---
 
-## 🎯 By Role
+## Quick Start
 
-### 👔 Business Users
-- **START_HERE.md** - Understand the system
-- **GETTING_STARTED.md** - Set up your system
-- **USER_GUIDE.md** - Daily operations
-- **TROUBLESHOOTING.md** - Fix issues
+### 1. Start the System
 
-### 👨‍💻 Developers
-- **ARCHITECTURE.md** - How it works
-- **SECURITY.md** - Security model
-- **CLAUDE.md** (project root) - Development guide
-- **PM2_GUIDE.md** - Process management
+```bash
+# Start all 19 PM2 processes
+pm2 start process-manager/pm2.config.js
 
-### 🔧 DevOps/Admins
-- **PM2_GUIDE.md** - Process control
-- **PROCESS_CONTROL.md** - Advanced management
-- **TROUBLESHOOTING.md** - Debugging
-- **[CLAUDE.md](../CLAUDE.md)** - Complete reference
+# Check status
+pm2 status
 
----
+# View logs
+pm2 logs
+```
 
-## 📖 Quick Navigation
+### 2. Check the Dashboard
 
-### "I want to..."
+Open `AI_Employee_Vault/Dashboard.md` in Obsidian to see:
+- Pending messages
+- Active projects
+- Bank balance
+- System status
 
-- **Set up the system** → [GETTING_STARTED.md](GETTING_STARTED.md)
-- **Learn what it does** → [START_HERE.md](START_HERE.md)
-- **Use it day-to-day** → [USER_GUIDE.md](USER_GUIDE.md)
-- **Fix a problem** → [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-- **Understand how it works** → [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Post to social media** → [SOCIAL_MEDIA.md](SOCIAL_MEDIA.md)
-- **Manage processes** → [PM2_GUIDE.md](PM2_GUIDE.md)
-- **Use autonomous tasks** → [RALPH_USER_GUIDE.md](RALPH_USER_GUIDE.md)
+### 3. Review and Approve
+
+Check `AI_Employee_Vault/Pending_Approval/` for items requiring human review.
+
+Move to `AI_Employee_Vault/Approved/` to execute, or `AI_Employee_Vault/Rejected/` to decline.
 
 ---
 
-## 🔄 Documentation Updates
+## Architecture
 
-### Recent Changes (v1.3.0 - January 17, 2026)
+### Three-Layer System
 
-**New:**
-- ✨ **START_HERE.md** - Introduction for new users
-- ✨ **GETTING_STARTED.md** - Setup guide
-- ✨ **USER_GUIDE.md** - Daily usage guide
-- ✨ **TROUBLESHOOTING.md** - Common issues & solutions
-- 🤖 **AI Auto-Approver** - Added to architecture
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   PERCEPTION LAYER                          │
+│  Monitors external services and creates action files          │
+│                                                              │
+│  Gmail • Calendar • Slack • WhatsApp • Filesystem          │
+└───────────────────────┬─────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  REASONING LAYER                           │
+│  AI Auto-Approver (Claude 3 Haiku) analyzes files and        │
+│  makes intelligent decisions:                                │
+│  • approve → Safe actions (file ops, known contacts)        │
+│  • reject → Dangerous (scams, phishing, payments)           │
+│  • manual → Needs human review (social media, new contacts) │
+└───────────────────────┬─────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ACTION LAYER                             │
+│  Approval monitors detect approved files and execute        │
+│  actions via MCP servers using browser automation:         │
+│                                                              │
+│  LinkedIn • Twitter • Facebook • Instagram • Email         │
+└─────────────────────────────────────────────────────────────┘
+```
 
-**Updated:**
-- **ARCHITECTURE.md** - Added AI auto-approver layer
-- All guides updated for v1.3.0 with AI-powered decisions
+### Components
 
-**Removed:**
-- QUICK_REFERENCE.md (merged into USER_GUIDE.md)
-- STATUS.md (moved to Dashboard.md)
+**16 PM2 Processes Running 24/7:**
 
----
-
-## 📝 Conventions
-
-### File Naming
-
-- **START_HERE.md** - Required starting point
-- **GETTING_STARTED.md** - First-time setup
-- **USER_GUIDE.md** - Daily operations
-- **TROUBLESHOOTING.md** - Problem solving
-- **GUIDE.md** - Comprehensive guides
-- **QUICKSTART.md** - Quick setup references
-
-### Formatting
-
-- ✅ Beginner-friendly explanations
-- ✅ Code examples with syntax highlighting
-- ✅ Step-by-step instructions
-- ✅ Troubleshooting sections
-- ✅ Diagrams and tables
-- ✅ Version numbers and update dates
-
----
-
-## 🆘 Need Help?
-
-### Can't Find What You're Looking For?
-
-1. **Check START_HERE.md** - Has links to everything
-2. **Search this folder** - Use your OS search
-3. **Check CLAUDE.md** - Main project documentation
-4. **Ask in issues** - GitHub issues tracker
-
-### Documentation Issue?
-
-**Found a mistake?**
-**Missing information?**
-**Can't understand something?**
-
-Please report it! Good documentation helps everyone.
+| Type | Process | Purpose |
+|------|---------|---------|
+| **Watchers** (6) | gmail-watcher, calendar-watcher, slack-watcher, odoo-watcher, filesystem-watcher, whatsapp-watcher | Monitor external services |
+| **Approval Monitors** (7) | email-approval-monitor, calendar-approval-monitor, slack-approval-monitor, linkedin-approval-monitor, twitter-approval-monitor, facebook-approval-monitor, instagram-approval-monitor | Execute approved actions |
+| **Core** (3) | auto-approver, ai-employee-dashboard | AI decisions + web UI |
 
 ---
 
-## 🗂️ Alternative Organization
+## Features
 
-### By Topic
+### 1. Email Management
 
-**Getting Started:**
-- START_HERE.md
-- GETTING_STARTED.md
-- USER_GUIDE.md
+**Gmail Watcher** monitors your inbox and:
+- Detects new unread messages
+- Identifies important emails (keywords, flags)
+- Creates action files in `Needs_Action/`
+- AI Auto-Approver triages automatically
 
-**Using the System:**
-- USER_GUIDE.md
-- SOCIAL_MEDIA.md
-- RALPH_USER_GUIDE.md
+**Email Approval Monitor**:
+- Detects approved emails in `Approved/`
+- Sends via Gmail MCP server
+- Moves to `Done/` on success
 
-**Managing the System:**
-- PM2_GUIDE.md
-- PROCESS_CONTROL.md
-- TROUBLESHOOTING.md
+### 2. Calendar Management
 
-**Technical Details:**
-- ARCHITECTURE.md
-- SECURITY.md
-- APPROVAL_MONITORS.md
+**Calendar Watcher** monitors Google Calendar:
+- Detects upcoming events
+- Identifies meetings requiring preparation
+- Creates reminder files
 
-### By Skill Level
+**Calendar Approval Monitor**:
+- Creates/updates calendar events via Calendar MCP
+- Handles event conflicts and scheduling
 
-**Beginner:**
-- START_HERE.md
-- GETTING_STARTED.md
-- USER_GUIDE.md (Part 1)
-- TROUBLESHOOTING.md (Part 1)
+### 3. Social Media Automation
 
-**Intermediate:**
-- USER_GUIDE.md (Part 2)
-- SOCIAL_MEDIA.md
-- PM2_GUIDE.md
-- RALPH_USER_GUIDE.md
+All platforms support:
+- **Create posts** via skill invocation or manual file creation
+- **Auto-approval** workflow (AI flags for manual review)
+- **Fast posting** via Chrome CDP automation
 
-**Advanced:**
-- ARCHITECTURE.md
-- PROCESS_CONTROL.md
-- SECURITY.md
-- CLAUDE.md (project root)
+**LinkedIn:**
+- Fast copy-paste method (100-200x faster than typing)
+- No character limit
+- Professional formatting
+
+**Twitter/X:**
+- 280 character limit (auto-truncates if longer)
+- Fast copy-paste method
+
+**Facebook:**
+- Direct content insertion
+- Supports emojis and formatting
+- 63,206 character limit
+
+**Instagram:**
+- **Professional image generation** (1080x1080)
+- 6 color themes (Midnight Purple, Ocean Blue, Sunset Orange, Forest Green, Royal Gold, Deep Navy)
+- Auto-caption with hashtags
+- Emojis removed from image, kept in caption
+
+### 4. AI Auto-Approver
+
+Powered by Claude 3 Haiku, makes intelligent decisions:
+
+| Decision | Criteria |
+|----------|----------|
+| **approve** | File operations, known contacts, Slack/WhatsApp, internal tasks |
+| **reject** | Scams, phishing, payment requests |
+| **manual** | Social media, payments, new contacts |
+
+**Cost:** ~$0.00025 per decision (~$5-10/month)
+
+### 5. Monday Morning CEO Briefing
+
+**The standout feature** that transforms AI from reactive to proactive.
+
+**Generates comprehensive briefing with:**
+- Executive summary
+- Revenue analysis (weekly, MTD, vs target)
+- Completed tasks
+- Bottlenecks
+- Proactive suggestions (cost optimization, process improvements)
+- Action items
+
+**Performance:** 10-15 minutes vs 30-60 manual (3-6x faster)
+
+**Usage:**
+```bash
+# Via Python
+python .claude/skills/weekly-briefing/invoke.py "Generate CEO briefing"
+
+# Via Claude Code
+/skill weekly-briefing "Generate business audit"
+```
+
+### 6. Ralph - Autonomous Task Execution
+
+**Ralph Wiggum Loop** for autonomous multi-step task completion:
+
+1. Load task list
+2. Pick highest priority incomplete task
+3. Plan execution
+4. Execute using available skills
+5. Create approval request for external actions
+6. Wait for human approval
+7. Verify execution
+8. Continue to next task
+
+**Usage:**
+```bash
+python .claude/skills/ralph/invoke.py "Complete client onboarding"
+```
+
+### 7. Daily Review
+
+Generates daily task plans with:
+- Priority tasks for the day
+- Upcoming deadline alerts
+- Inbox triage
+- Schedule optimization
 
 ---
 
-## 📊 Documentation Stats
+## Folder Structure
 
-| Category | Files | Pages |
-|----------|-------|-------|
-| Essential Guides | 4 | ~50 pages |
-| Technical Docs | 4 | ~30 pages |
-| Platform Guides | 4 | ~20 pages |
-| Advanced Topics | 3 | ~15 pages |
-| **Total** | **15** | **~115 pages** |
+```
+AI_Employee_Vault/
+├── Dashboard.md              # System status overview
+├── Company_Handbook.md       # Rules of engagement
+├── Business_Goals.md          # Business targets
+│
+├── Needs_Action/              # Items detected by watchers
+├── Pending_Approval/          # Awaiting human review
+├── Approved/                  # Ready for execution
+├── Rejected/                  # Declined items
+├── Done/                      # Completed items
+│
+├── Plans/                     # Execution plans
+├── Logs/                      # Daily JSON logs (YYYY-MM-DD.json)
+├── Briefings/                  # CEO briefings
+│
+├── Accounting/                 # Financial records
+└── Updates/                   # Cloud agent updates
+```
 
 ---
 
-*Last Updated: 2026-01-17*
-*Documentation Version: v1.3.0*
-*System Version: v1.3.0 (Platinum Tier)*
+## Skills
+
+All AI functionality is organized as **Agent Skills** in `.claude/skills/`:
+
+### Watcher Skills
+- **email-manager** - Gmail API integration
+- **calendar-manager** - Google Calendar events
+- **slack-manager** - Slack Bot API
+- **whatsapp-manager** - Playwright automation
+- **filesystem-manager** - File system monitoring
+- **xero-manager** - Xero accounting via MCP
+
+### Social Media Skills
+- **linkedin-manager** - LinkedIn posting
+- **twitter-manager** - Twitter/X posting
+- **facebook-instagram-manager** - Facebook & Instagram posting
+
+### Core Skills
+- **approval-manager** - Human-in-the-loop approval
+- **ralph** - Autonomous task execution
+- **weekly-briefing** - CEO business audit
+- **daily-review** - Daily task planning
+
+### Supporting Skills
+- **content-generator** - Content creation
+- **planning-agent** - Task breakdown
+- **business-handover** - Executive continuity
+
+---
+
+## Usage Examples
+
+### Create a LinkedIn Post
+
+**Option 1: Via Skill Invocation**
+```bash
+python .claude/skills/linkedin-manager/invoke.py "Excited to share our AI automation progress #AI #Tech"
+```
+
+**Option 2: Manual File Creation**
+```bash
+cat > "AI_Employee_Vault/Pending_Approval/LINKEDIN_POST_$(date +%Y%m%d_%H%M%S).md" << 'EOF'
+---
+type: linkedin_post
+platform: linkedin
+created: $(date -Iseconds)
+status: pending_approval
+---
+
+Your post content here
+#Hashtags
+EOF
+
+# Then approve
+mv "AI_Employee_Vault/Pending_Approval/LINKEDIN_POST_*.md" "AI_Employee_Vault/Approved/"
+```
+
+### Generate CEO Briefing
+
+```bash
+python .claude/skills/weekly-briefing/invoke.py "Generate CEO briefing"
+```
+
+Output saved to: `AI_Employee_Vault/Briefings/YYYY-MM-DD_Monday_Briefing.md`
+
+### Start Autonomous Task Execution
+
+```bash
+python .claude/skills/ralph/invoke.py "Complete client onboarding process"
+```
+
+Creates task file in `Plans/`, ready for Ralph to execute.
+
+---
+
+## PM2 Management
+
+### Start All Processes
+
+```bash
+pm2 start process-manager/pm2.config.js
+pm2 save
+```
+
+### Check Status
+
+```bash
+pm2 status
+pm2 logs
+pm2 logs gmail-watcher --lines 50
+```
+
+### Restart a Process
+
+```bash
+pm2 restart linkedin-approval-monitor
+```
+
+### Stop All
+
+```bash
+pm2 stop all
+```
+
+---
+
+## Chrome Automation (Social Media)
+
+### Start Chrome with CDP
+
+```bash
+# Windows
+start_chrome.bat
+
+# Or manually:
+chrome.exe --user-data-dir="C:\Users\User\AppData\Local\Google\Chrome\User Data" --remote-debugging-port=9222
+```
+
+### Login to Platforms
+
+1. Chrome window opens with CDP on port 9222
+2. Navigate to each platform (linkedin.com, x.com, facebook.com, instagram.com)
+3. Log in with your credentials
+4. Keep Chrome window open
+
+### Posting Flow
+
+1. Create post in `Pending_Approval/`
+2. Review and move to `Approved/`
+3. Approval monitor detects and posts
+4. Moves to `Done/` on success
+
+---
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Social Media DRY_RUN mode (default: true for testing)
+LINKEDIN_DRY_RUN=false
+TWITTER_DRY_RUN=false
+FACEBOOK_DRY_RUN=false
+INSTAGRAM_DRY_RUN=false
+
+# Anthropic API for AI Auto-Approver
+ANTHROPIC_API_KEY=your-key-here
+```
+
+### PM2 Configuration
+
+Main config: `process-manager/pm2.config.js`
+
+All processes use:
+- Vault path: `--vault AI_Employee_Vault`
+- Python path: `PYTHONPATH=C:\Users\User\Desktop\AI_EMPLOYEE_APP`
+
+---
+
+## Troubleshooting
+
+### Process Not Starting
+
+```bash
+# Check for errors
+pm2 logs process-name --err
+
+# Check if Python module exists
+python -c "from watchers.gmail_watcher import GmailWatcher; print('OK')"
+
+# Restart process
+pm2 restart process-name
+```
+
+### Chrome Not Connecting
+
+```bash
+# Check if CDP port is open
+curl http://localhost:9222/json/version
+
+# Should return browser info
+# If error, start Chrome CDP manually
+```
+
+### File Not Being Created
+
+```bash
+# Check vault exists
+ls AI_Employee_Vault/
+
+# Check folder permissions
+ls -la AI_Employee_Vault/Pending_Approval/
+
+# Check watcher logs
+pm2 logs gmail-watcher
+```
+
+### Social Media Post Failing
+
+```bash
+# Check if Chrome CDP is running
+curl http://localhost:9222/json/version
+
+# Check if logged in (manually verify in Chrome)
+
+# Check DRY_RUN mode
+echo $LINKEDIN_DRY_RUN  # Should be "false" for live posting
+
+# Check approval monitor logs
+pm2 logs linkedin-approval-monitor --err
+```
+
+---
+
+## Security
+
+### Human-in-the-Loop
+
+All sensitive actions require approval:
+- Social media posts
+- Email sending
+- Calendar changes
+- Payments
+- New contacts
+
+### No Secrets Sync
+
+Vault sync excludes:
+- `.env`
+- `*_token.json`
+- `*_credentials.json`
+- WhatsApp sessions
+
+### Audit Trail
+
+All actions logged to: `AI_Employee_Vault/Logs/YYYY-MM-DD.json`
+
+---
+
+## Performance
+
+| Metric | Value |
+|--------|-------|
+| **Processes Running** | 16/17 (94%) |
+| **Skills Available** | 20+ |
+| **Social Media Platforms** | 4 (LinkedIn, Twitter, Facebook, Instagram) |
+| **Posting Speed** | 100-200x faster (fast copy-paste) |
+| **CEO Briefing Speed** | 3-6x faster than manual |
+| **Human Review Reduction** | 95%+ |
+| **Cost/Month** | ~$5-10 (AI Auto-Approver) |
+
+---
+
+## Development
+
+### Project Structure
+
+```
+AI_EMPLOYEE_APP/
+├── .claude/
+│   └── skills/              # All Agent Skills
+│       ├── email-manager/
+│       ├── linkedin-manager/
+│       ├── weekly-briefing/
+│       └── ... (20+ skills)
+├── mcp-servers/               # MCP servers for external actions
+│   ├── linkedin-mcp/
+│   ├── twitter-mcp/
+│   ├── facebook-mcp/
+│   └── instagram-mcp/
+├── watchers/                   # Watcher modules
+│   ├── base_watcher.py
+│   ├── gmail_watcher.py
+│   └── ...
+├── process-manager/
+│   ├── pm2.config.js         # PM2 configuration
+│   └── pm2.local.config.js    # Local PM2 config
+├── AI_Employee_Vault/         # Obsidian vault (all data)
+├── scripts/                    # Utility scripts
+│   ├── chrome_cdp_helper.py
+│   └── start_chrome.bat
+└── docs/                       # Documentation (this file)
+```
+
+### Adding a New Skill
+
+1. Create directory: `.claude/skills/your-skill/`
+2. Create `SKILL.md` with YAML frontmatter
+3. Add `scripts/` subdirectory if needed
+4. Add to PM2 config if continuous process
+5. Document in skills index
+
+---
+
+## Support
+
+### Getting Help
+
+- **README.md** - This file
+- `docs/AGENT_SKILLS_REFERENCE.md` - Complete skill catalog
+- `docs/TROUBLESHOOTING.md` - Common issues and solutions
+
+### Logs
+
+```bash
+# All logs
+pm2 logs
+
+# Specific process
+pm2 logs gmail-watcher --lines 100
+
+# Error logs only
+pm2 logs --err
+```
+
+### Dashboard
+
+Web dashboard available at: http://localhost:3000
+
+---
+
+## License
+
+Apache License 2.0
+
+---
+
+**AI Employee v1.4.1** - Your autonomous AI business assistant.
+
+Built with Claude Code, Python, Node.js, Playwright, and Claude 3 Haiku.

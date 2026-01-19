@@ -54,6 +54,8 @@ ChromeDebug/
 Logs/
 *.log
 AI_Employee_Vault/Logs/
+logs/
+pm2_*.log
 
 # Action files (optional - comment out if tracking in git)
 # Needs_Action/
@@ -135,3 +137,6 @@ __pycache__/
 
 # Claude Code config (contains API tokens)
 .claude/config.json
+
+# Tools with hardcoded credentials
+tools/

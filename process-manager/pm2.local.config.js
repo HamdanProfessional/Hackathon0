@@ -1,12 +1,11 @@
 /**
- * PM2 Configuration for LOCAL MACHINE (Platinum Tier)
+ * PM2 Configuration for LOCAL MACHINE (Platinum Tier) - Windows Compatible
  *
  * Local runs ONLY:
  * - WhatsApp Watcher (session required)
  * - Filesystem Watcher (Inbox monitoring)
  * - Approval Monitors (execute approved actions)
  * - Dashboard (single writer rule)
- * - Vault Sync (push to cloud)
  *
  * Local NEVER runs:
  * - Gmail/Calendar/Slack watchers (cloud handles these)
@@ -23,9 +22,9 @@ module.exports = {
 
     {
       name: 'whatsapp-watcher',
-      script: './watchers/whatsapp_watcher_playwright.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault',
+      script: 'python',
+      interpreter: 'none',
+      args: '-m watchers.whatsapp_watcher_playwright --vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -41,9 +40,9 @@ module.exports = {
 
     {
       name: 'filesystem-watcher',
-      script: './watchers/filesystem_watcher.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault',
+      script: 'python',
+      interpreter: 'none',
+      args: '-m watchers.filesystem_watcher --vault AI_Employee_Vault --watch-folder AI_Employee_Vault/Inbox',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -64,8 +63,8 @@ module.exports = {
     {
       name: 'email-approval-monitor',
       script: './scripts/monitors/email_approval_monitor.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --live-mode',
+      interpreter: 'python',
+      args: '--vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -83,8 +82,8 @@ module.exports = {
     {
       name: 'calendar-approval-monitor',
       script: './scripts/monitors/calendar_approval_monitor.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --live-mode',
+      interpreter: 'python',
+      args: '--vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -101,8 +100,8 @@ module.exports = {
     {
       name: 'slack-approval-monitor',
       script: './scripts/monitors/slack_approval_monitor.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --live-mode',
+      interpreter: 'python',
+      args: '--vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -122,9 +121,9 @@ module.exports = {
 
     {
       name: 'linkedin-approval-monitor',
-      script: './scripts/social-media/linkedin_approval_monitor.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --live-mode',
+      script: './.claude/skills/linkedin-manager/scripts/linkedin_approval_monitor.py',
+      interpreter: 'python',
+      args: '--vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -141,9 +140,9 @@ module.exports = {
 
     {
       name: 'twitter-approval-monitor',
-      script: './scripts/social-media/twitter_approval_monitor.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --live-mode',
+      script: './.claude/skills/twitter-manager/scripts/twitter_approval_monitor.py',
+      interpreter: 'python',
+      args: '--vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -160,9 +159,9 @@ module.exports = {
 
     {
       name: 'facebook-approval-monitor',
-      script: './scripts/social-media/facebook_approval_monitor.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --live-mode',
+      script: './.claude/skills/facebook-instagram-manager/scripts/facebook-approval-monitor.py',
+      interpreter: 'python',
+      args: '--vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -179,9 +178,9 @@ module.exports = {
 
     {
       name: 'instagram-approval-monitor',
-      script: './scripts/social-media/instagram_approval_monitor.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --live-mode',
+      script: './.claude/skills/facebook-instagram-manager/scripts/instagram-approval-monitor.py',
+      interpreter: 'python',
+      args: '--vault AI_Employee_Vault',
       cwd: './',
       instances: 1,
       autorestart: true,
@@ -219,82 +218,9 @@ module.exports = {
     },
 
     // ============================================================
-    // VAULT SYNC (Push to Cloud)
+    // SCHEDULED TASKS (Local Only) - Disabled for now
     // ============================================================
 
-    {
-      name: 'vault-sync-push',
-      script: './scripts/vault_sync_push.sh',
-      interpreter: '/bin/bash',
-      cwd: './',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      cron_restart: '*/2 * * * *',  // Every 2 minutes
-      error_file: './logs/vault-sync-push-error.log',
-      out_file: './logs/vault-sync-push-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    },
-
-    // ============================================================
-    // DASHBOARD UPDATE MERGER (Cloud Updates -> Local Dashboard)
-    // ============================================================
-
-    {
-      name: 'dashboard-update-merger-local',
-      script: './scripts/merge_dashboard_updates.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault --local-mode',
-      cwd: './',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '200M',
-      cron_restart: '*/1 * * * *',  // Every 1 minute
-      env: {
-        PYTHONUNBUFFERED: '1'
-      },
-      error_file: './logs/dashboard-merger-local-error.log',
-      out_file: './logs/dashboard-merger-local-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    },
-
-    // ============================================================
-    // SCHEDULED TASKS (Local Only)
-    // ============================================================
-
-    {
-      name: 'daily-review',
-      script: './scripts/scheduled_tasks/daily_review.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault',
-      cwd: './',
-      instances: 1,
-      autorestart: false,
-      cron_restart: '0 6 * * 1-5',  // Mon-Fri 6 AM
-      env: {
-        PYTHONUNBUFFERED: '1'
-      },
-      error_file: './logs/daily-review-error.log',
-      out_file: './logs/daily-review-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    },
-
-    {
-      name: 'monday-ceo-briefing',
-      script: './scripts/scheduled_tasks/monday_ceo_briefing.py',
-      interpreter: 'python3',
-      args: '--vault AI_Employee_Vault',
-      cwd: './',
-      instances: 1,
-      autorestart: false,
-      cron_restart: '0 7 * * 1',  // Monday 7 AM
-      env: {
-        PYTHONUNBUFFERED: '1'
-      },
-      error_file: './logs/monday-briefing-error.log',
-      out_file: './logs/monday-briefing-out.log',
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    }
+    // Daily review and Monday briefing can be added later
   ]
 };

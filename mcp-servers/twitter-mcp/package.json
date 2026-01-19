@@ -1,0 +1,17 @@
+{
+  "name": "twitter-mcp-server",
+  "version": "1.0.0",
+  "description": "Twitter/X MCP server - Post to Twitter via Model Context Protocol",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["mcp", "twitter", "social-media", "automation"],
+  "author": "AI Employee",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "playwright": "^1.48.0"
+  }
+}
