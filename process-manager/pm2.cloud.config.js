@@ -1,119 +1,157 @@
 /**
  * PM2 Configuration for CLOUD VM (Platinum Tier)
  *
- * Cloud runs ONLY:
+ * Cloud runs ONLY (24/7 Always-On):
+ * - Email triage + draft replies
+ * - Social post drafts/scheduling
  * - Watchers (Gmail, Calendar, Slack, Odoo)
- * - AI Auto-Approver (Claude 3 Haiku)
- * - Health Monitor
- * - Vault Sync (pull from local)
+ * - AI Auto-Approver (draft-only mode)
+ * - Git sync push
  *
  * Cloud NEVER runs:
- * - WhatsApp (local session required)
- * - Banking/payment actions
- * - Final send/post actions
+ * - WhatsApp Watcher (local session required)
+ * - Email/Calendar/Slack senders (approval needed)
+ * - Social media posters (approval needed)
+ * - WhatsApp/banking/payment actions
  *
- * Environment: CLOUD_MODE=true, DRAFT_ONLY=true
+ * Environment: Cloud VM (Ubuntu 22.04)
+ * Project Root: /root/AI_EMPLOYEE_APP
  */
+
+const path = require('path');
+
+const PROJECT_ROOT = '/root/AI_EMPLOYEE_APP';
+const VAULT_PATH = path.join(PROJECT_ROOT, 'AI_Employee_Vault');
 
 module.exports = {
   apps: [
     // ============================================================
-    // CLOUD WATCHERS (Perception Layer)
+    // CLOUD WATCHERS (Detection Only - Draft Replies)
     // ============================================================
 
     {
-      name: 'gmail-watcher-cloud',
-      script: './venv/bin/python',
-      args: '-m watchers.gmail_watcher --vault AI_Employee_Vault --dry-run',
-      cwd: './',
+      name: 'gmail-watcher',
+      script: path.join(PROJECT_ROOT, 'venv', 'bin', 'python'),
+      args: '-m watchers.gmail_watcher --vault ' + VAULT_PATH + ' --credentials ' + path.join(PROJECT_ROOT, 'mcp-servers', 'email-mcp', 'credentials.json'),
+      cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
       watch: false,
+      max_restarts: 10,
       max_memory_restart: '500M',
       env: {
-        CLOUD_MODE: 'true',
-        PYTHONUNBUFFERED: '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'CLOUD_MODE': 'true'
       },
-      error_file: './logs/cloud-gmail-watcher-error.log',
-      out_file: './logs/cloud-gmail-watcher-out.log',
+      error_file: path.join(PROJECT_ROOT, 'logs', 'gmail-watcher-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'gmail-watcher-out.log'),
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
 
     {
-      name: 'calendar-watcher-cloud',
-      script: './venv/bin/python',
-      args: '-m watchers.calendar_watcher --vault AI_Employee_Vault --dry-run',
-      cwd: './',
+      name: 'calendar-watcher',
+      script: path.join(PROJECT_ROOT, 'venv', 'bin', 'python'),
+      args: '-m watchers.calendar_watcher --vault ' + VAULT_PATH,
+      cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
       watch: false,
+      max_restarts: 10,
       max_memory_restart: '300M',
       env: {
-        CLOUD_MODE: 'true',
-        PYTHONUNBUFFERED: '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'CLOUD_MODE': 'true'
       },
-      error_file: './logs/cloud-calendar-watcher-error.log',
-      out_file: './logs/cloud-calendar-watcher-out.log',
+      error_file: path.join(PROJECT_ROOT, 'logs', 'calendar-watcher-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'calendar-watcher-out.log'),
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
 
     {
-      name: 'slack-watcher-cloud',
-      script: './venv/bin/python',
-      args: '-m watchers.slack_watcher --vault AI_Employee_Vault --dry-run',
-      cwd: './',
+      name: 'slack-watcher',
+      script: path.join(PROJECT_ROOT, 'venv', 'bin', 'python'),
+      args: '-m watchers.slack_watcher --vault ' + VAULT_PATH,
+      cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
       watch: false,
+      max_restarts: 10,
       max_memory_restart: '300M',
       env: {
-        CLOUD_MODE: 'true',
-        PYTHONUNBUFFERED: '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'CLOUD_MODE': 'true'
       },
-      error_file: './logs/cloud-slack-watcher-error.log',
-      out_file: './logs/cloud-slack-watcher-out.log',
+      error_file: path.join(PROJECT_ROOT, 'logs', 'slack-watcher-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'slack-watcher-out.log'),
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
 
     {
-      name: 'odoo-watcher-cloud',
-      script: './venv/bin/python',
-      args: '-m watchers.odoo_watcher --vault AI_Employee_Vault --dry-run',
-      cwd: './',
+      name: 'odoo-watcher',
+      script: path.join(PROJECT_ROOT, 'venv', 'bin', 'python'),
+      args: '-m watchers.odoo_watcher --vault ' + VAULT_PATH,
+      cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
       watch: false,
+      max_restarts: 10,
       max_memory_restart: '300M',
       env: {
-        PYTHONUNBUFFERED: '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'CLOUD_MODE': 'true'
       },
-      error_file: './logs/cloud-odoo-watcher-error.log',
-      out_file: './logs/cloud-odoo-watcher-out.log',
+      error_file: path.join(PROJECT_ROOT, 'logs', 'odoo-watcher-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'odoo-watcher-out.log'),
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
 
     // ============================================================
-    // CLOUD AI AUTO-APPROVER
+    // CLOUD AI AUTO-APPROVER (Draft-Only Mode)
     // ============================================================
 
     {
-      name: 'auto-approver-cloud',
-      script: './scripts/auto_approver_glm.py',
-      interpreter: '/home/aiemployee/AI_EMPLOYEE_APP/venv/bin/python',
-      args: '--vault AI_Employee_Vault',
-      cwd: './',
+      name: 'auto-approver',
+      script: path.join(PROJECT_ROOT, '.claude', 'skills', 'approval-manager', 'scripts', 'auto_approver.py'),
+      args: '--vault ' + VAULT_PATH + ' --mode cloud-draft',
+      cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
       watch: false,
+      max_restarts: 10,
       max_memory_restart: '500M',
       env: {
-        GLM_API_KEY: process.env.GLM_API_KEY,
-        GLM_API_URL: process.env.GLM_API_URL || 'https://api.z.ai/api/paas/v4',
-        CLOUD_MODE: 'true',
-        PYTHONUNBUFFERED: '1'
+        'ANTHROPIC_API_KEY': process.env.ANTHROPIC_API_KEY,
+        'PYTHONPATH': PROJECT_ROOT,
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'CLOUD_MODE': 'true'
       },
-      error_file: './logs/cloud-auto-approver-error.log',
-      out_file: './logs/cloud-auto-approver-out.log',
+      error_file: path.join(PROJECT_ROOT, 'logs', 'auto-approver-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'auto-approver-out.log'),
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+
+    // ============================================================
+    // GIT SYNC PUSH (Every 5 minutes)
+    // ============================================================
+
+    {
+      name: 'git-sync-push',
+      script: './scripts/git_sync_push.sh',
+      cwd: PROJECT_ROOT,
+      instances: 1,
+      autorestart: false,
+      cron_restart: '*/5 * * * *',
+      watch: false,
+      env: {
+        'PYTHONUNBUFFERED': '1'
+      },
+      error_file: path.join(PROJECT_ROOT, 'logs', 'git-sync-push-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'git-sync-push-out.log'),
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
 
@@ -123,27 +161,20 @@ module.exports = {
 
     {
       name: 'cloud-health-monitor',
-      script: './scripts/cloud_health_monitor.py',
-      interpreter: '/home/aiemployee/AI_EMPLOYEE_APP/venv/bin/python',
-      args: '--vault AI_Employee_Vault --interval 300',
-      cwd: './',
+      script: path.join(PROJECT_ROOT, 'scripts', 'cloud_health_monitor.py'),
+      args: '--vault ' + VAULT_PATH + ' --interval 300',
+      interpreter: path.join(PROJECT_ROOT, 'venv', 'bin', 'python'),
+      cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
       watch: false,
       max_memory_restart: '200M',
       env: {
-        PYTHONUNBUFFERED: '1'
+        'PYTHONUNBUFFERED': '1'
       },
-      error_file: './logs/cloud-health-monitor-error.log',
-      out_file: './logs/cloud-health-monitor-out.log',
+      error_file: path.join(PROJECT_ROOT, 'logs', 'health-monitor-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'health-monitor-out.log'),
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    },
-
-    // ============================================================
-    // VAULT SYNC (Pull from Local)
-    // ============================================================
-
-    // Vault sync and dashboard merger disabled for now
-    // Re-enable after setting up GitHub repo for vault sync
+    }
   ]
 };
