@@ -18,6 +18,13 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 
+# Add for HTTP requests to custom API
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 # Fix Windows encoding
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
@@ -81,14 +88,37 @@ When in doubt, require manual review. It's better to ask for approval than to ma
         try:
             import anthropic
 
-            # Support custom base URL for API compatibility
-            base_url = os.getenv('ANTHROPIC_BASE_URL', 'https://api.anthropic.com')
-            client = anthropic.Anthropic(api_key=self.api_key, base_url=base_url)
-
+            # Determine action type first to decide tokens/temperature
             action_type = frontmatter.get('type', '').lower()
             is_email = action_type == 'email'
             is_social = action_type in ['linkedin_post', 'twitter_post', 'instagram_post', 'facebook_post']
             needs_draft = is_email or is_social
+
+            # Define tokens and temperature BEFORE API call
+            max_tokens = 500 if needs_draft else 10
+            temperature = 0.7 if needs_draft else 0
+
+            # Support custom base URL for API compatibility
+            base_url = os.getenv('ANTHROPIC_BASE_URL', 'https://api.anthropic.com')
+
+            # Check if using custom API endpoint (like z.ai)
+            # Custom APIs may have different endpoint structures
+            use_custom_api = base_url != 'https://api.anthropic.com' and HAS_REQUESTS
+
+            if use_custom_api:
+                # Use direct HTTP request for custom API (z.ai / GLM)
+                import requests
+
+                # GLM uses OpenAI-style /chat/completions endpoint
+                api_url = base_url.rstrip('/') + '/chat/completions'
+
+                headers = {
+                    'Authorization': f'Bearer {self.api_key}',
+                    'Content-Type': 'application/json'
+                }
+            else:
+                # Use standard Anthropic SDK
+                client = anthropic.Anthropic(api_key=self.api_key, base_url=base_url)
 
             # Build prompt with context
             if needs_draft:
@@ -128,8 +158,6 @@ For action="draft":
 
 Respond ONLY with valid JSON (no markdown, no code blocks).
 """
-                max_tokens = 500
-                temperature = 0.7
             else:
                 prompt = f"""You are an AI assistant that decides whether to auto-approve actions based on company rules.
 
@@ -156,20 +184,37 @@ Rules:
 
 Respond with ONLY ONE WORD: approve, reject, or manual
 """
-                max_tokens = 10
-                temperature = 0
 
-            message = client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=max_tokens,
-                temperature=temperature,
-                messages=[{
-                    "role": "user",
-                    "content": prompt
-                }]
-            )
+            if use_custom_api:
+                # Make HTTP request with custom API (GLM 4.5)
+                payload = {
+                    'model': 'glm-4',
+                    'max_tokens': max_tokens,
+                    'temperature': temperature,
+                    'messages': [{'role': 'user', 'content': prompt}]
+                }
 
-            response_text = message.content[0].text.strip()
+                response = requests.post(api_url, json=payload, headers=headers, timeout=30)
+                response.raise_for_status()
+                response_json = response.json()
+
+                # GLM uses OpenAI-style format: choices[0].message.content
+                if 'choices' in response_json and len(response_json['choices']) > 0:
+                    response_text = response_json['choices'][0]['message']['content'].strip()
+                else:
+                    response_text = response.text.strip()
+            else:
+                # Use standard Anthropic SDK
+                message = client.messages.create(
+                    model="claude-3-haiku-20240307",
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    messages=[{
+                        "role": "user",
+                        "content": prompt
+                    }]
+                )
+                response_text = message.content[0].text.strip()
 
             # Parse response based on whether we expected a draft
             if needs_draft:

@@ -40,7 +40,9 @@ module.exports = {
       watch: false,
       max_memory_restart: '500M',
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'whatsapp-watcher-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'whatsapp-watcher-out.log'),
@@ -58,7 +60,9 @@ module.exports = {
       watch: false,
       max_memory_restart: '200M',
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'filesystem-watcher-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'filesystem-watcher-out.log'),
@@ -81,7 +85,9 @@ module.exports = {
       max_memory_restart: '300M',
       env: {
         'EMAIL_DRY_RUN': 'false',  // LIVE MODE
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'email-approval-monitor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'email-approval-monitor-out.log'),
@@ -99,7 +105,9 @@ module.exports = {
       watch: false,
       max_memory_restart: '300M',
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'calendar-approval-monitor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'calendar-approval-monitor-out.log'),
@@ -117,7 +125,9 @@ module.exports = {
       watch: false,
       max_memory_restart: '300M',
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'slack-approval-monitor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'slack-approval-monitor-out.log'),
@@ -140,7 +150,9 @@ module.exports = {
       max_memory_restart: '300M',
       env: {
         'LINKEDIN_DRY_RUN': 'false',  // LIVE MODE
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'linkedin-approval-monitor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'linkedin-approval-monitor-out.log'),
@@ -159,7 +171,9 @@ module.exports = {
       max_memory_restart: '300M',
       env: {
         'TWITTER_DRY_RUN': 'false',  // LIVE MODE
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'twitter-approval-monitor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'twitter-approval-monitor-out.log'),
@@ -178,7 +192,9 @@ module.exports = {
       max_memory_restart: '300M',
       env: {
         'FACEBOOK_DRY_RUN': 'false',  // LIVE MODE
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'facebook-approval-monitor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'facebook-approval-monitor-out.log'),
@@ -197,7 +213,9 @@ module.exports = {
       max_memory_restart: '300M',
       env: {
         'INSTAGRAM_DRY_RUN': 'false',  // LIVE MODE
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'instagram-approval-monitor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'instagram-approval-monitor-out.log'),
@@ -239,7 +257,9 @@ module.exports = {
       cron_restart: '*/5 * * * *',
       watch: false,
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'git-sync-pull-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'git-sync-pull-out.log'),
@@ -262,7 +282,9 @@ module.exports = {
       max_memory_restart: '200M',
       cron_restart: '*/2 * * * *',  // Every 2 minutes
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'dashboard-merger-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'dashboard-merger-out.log'),
@@ -285,7 +307,9 @@ module.exports = {
       watch: false,
       max_memory_restart: '300M',
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'daily-review-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'daily-review-out.log'),
@@ -304,7 +328,9 @@ module.exports = {
       watch: false,
       max_memory_restart: '300M',
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'monday-briefing-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'monday-briefing-out.log'),
@@ -323,7 +349,9 @@ module.exports = {
       watch: false,
       max_memory_restart: '200M',
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'audit-log-cleanup-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'audit-log-cleanup-out.log'),
@@ -346,7 +374,9 @@ module.exports = {
       max_memory_restart: '300M',
       cron_restart: '0 */4 * * *',  // Every 4 hours
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'social-media-scheduler-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'social-media-scheduler-out.log'),

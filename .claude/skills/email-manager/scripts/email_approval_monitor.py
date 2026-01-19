@@ -23,11 +23,17 @@ from pathlib import Path
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
 
-# Add project root to path for BaseWatcher import
-# Script is at .claude/skills/email-manager/scripts/, need to go up 5 levels to project root
+# Add project root to path for imports
 _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
+
+# Import MCP HTTP client
+try:
+    from utils.mcp_http_client import EmailMCPClient
+except ImportError:
+    print("[WARNING] MCP HTTP client not available. Email sending will not work.")
+    EmailMCPClient = None
 
 try:
     from watchers.base_watcher import BaseWatcher
@@ -130,7 +136,7 @@ class EmailApprovalMonitor(BaseWatcher):
 
     def process_approved_email(self, filepath: Path):
         """
-        Process an approved email action - sends the email.
+        Process an approved email action - sends the email via MCP.
 
         Args:
             filepath: Path to approved email file
@@ -155,16 +161,59 @@ class EmailApprovalMonitor(BaseWatcher):
                 print(f"Body:\n{email_details.get('body')[:200]}...")
             print(f"{'='*60}\n")
 
-            # Log the action
-            self._log_audit_action("email_send_approved", {
-                "file": filepath.name,
-                "to": email_details.get("to"),
-                "subject": email_details.get("subject"),
-                "timestamp": datetime.now().isoformat()
-            })
+            # Check if MCP client is available
+            if EmailMCPClient is None:
+                print("[WARNING] MCP client not available. Email will not be sent.")
+                print("[INFO] Keeping file in Approved/ for retry when MCP is available.")
+                return
 
-            # Move to Done folder
-            self._move_to_done(filepath)
+            # Get MCP server URL from environment or use default
+            mcp_url = os.getenv('EMAIL_MCP_URL', 'http://localhost:3000')
+
+            # Initialize MCP client
+            try:
+                mcp_client = EmailMCPClient(base_url=mcp_url)
+
+                # Check MCP server health
+                if not mcp_client.health_check():
+                    print(f"[ERROR] Email MCP server not reachable at {mcp_url}")
+                    print("[INFO] Keeping file in Approved/ for retry when MCP server is available.")
+                    return
+
+                # Send email via MCP
+                print(f"[INFO] Sending email to {email_details.get('to')} via MCP...")
+                result = mcp_client.send_email(
+                    to=email_details.get('to'),
+                    subject=email_details.get('subject'),
+                    body=email_details.get('body', ''),
+                    cc=email_details.get('cc'),
+                    bcc=email_details.get('bcc')
+                )
+
+                # Log success
+                message_id = result.get('messageId', 'unknown')
+                print(f"[SUCCESS] Email sent successfully! Message ID: {message_id}")
+
+                # Log the action
+                self._log_audit_action("email_sent_via_mcp", {
+                    "file": filepath.name,
+                    "to": email_details.get("to"),
+                    "subject": email_details.get("subject"),
+                    "message_id": message_id,
+                    "timestamp": datetime.now().isoformat()
+                })
+
+                # Move to Done only after successful send
+                self._move_to_done(filepath, success_message=f"Email sent via MCP. Message ID: {message_id}")
+
+            except Exception as mcp_error:
+                print(f"[ERROR] Failed to send email via MCP: {mcp_error}")
+                print("[INFO] Keeping file in Approved/ for retry on next check.")
+                self._log_audit_action("email_mcp_send_failed", {
+                    "file": filepath.name,
+                    "error": str(mcp_error),
+                    "timestamp": datetime.now().isoformat()
+                })
 
         except Exception as e:
             print(f"[ERROR] Error processing {filepath.name}: {e}")
@@ -200,6 +249,7 @@ class EmailApprovalMonitor(BaseWatcher):
         Extract email details from YAML frontmatter.
 
         Handles emails with smart quotes and special characters.
+        Also handles draft_content from AI-generated drafts.
         """
         details = {}
 
@@ -217,22 +267,31 @@ class EmailApprovalMonitor(BaseWatcher):
                 data = yaml.safe_load(yaml_content)
                 if data:
                     # Extract to, subject, from fields
-                    details['to'] = data.get('to', '')
+                    details['to'] = data.get('to', data.get('to_email', ''))
                     details['subject'] = data.get('subject', '')
                     details['from'] = data.get('from', '')
-                    details['body'] = data.get('body', '')
+
+                    # Check for AI-generated draft first
+                    if 'draft_content' in data:
+                        details['body'] = data.get('draft_content')
+                        details['has_draft'] = True
+                        details['draft_generated_at'] = data.get('draft_generated_at', '')
+                    else:
+                        details['body'] = data.get('body', '')
+                        details['has_draft'] = False
 
                     # Clean up extracted values
                     for key in ['to', 'subject', 'from']:
                         if details.get(key):
                             details[key] = details[key].strip().strip('"\'')  # Remove quotes
 
-                    # Extract body if not in YAML
-                    if not details.get('body'):
+                    # Extract body if not in YAML and no draft
+                    if not details.get('body') or not details['has_draft']:
                         # Extract from email body content
                         body_match = re.search(r'^# Email:.*?\n\n(.*)$', content, re.MULTILINE | re.DOTALL)
                         if body_match:
                             details['body'] = body_match.group(1).strip()
+                            details['has_draft'] = False
 
                     return details if details.get('to') and details.get('subject') else None
         except Exception as e:
@@ -240,14 +299,22 @@ class EmailApprovalMonitor(BaseWatcher):
 
         return None
 
-    def _move_to_done(self, filepath: Path):
-        """Move completed files to Done/ folder."""
+    def _move_to_done(self, filepath: Path, success_message: str = "Processed"):
+        """
+        Move completed files to Done/ folder.
+
+        Args:
+            filepath: Path to file to move
+            success_message: Optional success message to log
+        """
         done_folder = self.vault_path / "Done"
         done_folder.mkdir(parents=True, exist_ok=True)
 
         # Move file to Done/
         dest = done_folder / filepath.name
         shutil.move(str(filepath), str(dest))
+
+        print(f"[SUCCESS] Moved {filepath.name} to Done/ - {success_message}")
 
     def _log_audit_action(self, action_type: str, data: dict):
         """Log action to audit log."""
