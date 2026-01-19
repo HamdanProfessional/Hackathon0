@@ -138,16 +138,17 @@ Subject: {frontmatter.get('subject', 'N/A')}
 {content[:2000]}
 
 # YOUR TASK
-Decide the appropriate action and generate a draft if needed.
+This is an email reply or social media post request. Your job is to:
+1. Check if the content is safe (not spam, not a scam, not dangerous)
+2. If safe: Return action="draft" with an AI-generated draft for human review
+3. If unsafe (scam, phishing, dangerous): Return action="reject"
 
 Return your decision as a JSON object with these fields:
 - action: One of:
-  * "approve" - Safe, known contact, routine file operations, Slack/WhatsApp messages
+  * "draft" - Generate an AI draft for human review (use this for ALL safe emails and social posts)
   * "reject" - Scams, phishing, dangerous requests, spam
-  * "manual" - Requires human judgment (payments, new contacts, sensitive topics) - NO draft needed
-  * "draft" - Email replies or social media posts that need AI-generated draft for human review
 - reason: brief explanation of your decision
-- draft_content: (REQUIRED if action="draft", otherwise null) AI-generated response
+- draft_content: (REQUIRED if action="draft") AI-generated response
 
 For action="draft":
 - Email replies: Professional tone, concise, addresses sender's points, under 200 words
