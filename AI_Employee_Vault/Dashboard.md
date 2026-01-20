@@ -245,3 +245,255 @@ python scripts/cross_domain_insights.py --vault AI_Employee_Vault
 - `/Needs_Action/Personal/` - Personal tasks (health, family, hobbies)
 - `/Needs_Action/Business/` - Business tasks (clients, invoices, projects)
 - `/Needs_Action/Shared/` - Shared items (urgent, scheduling, reminders)
+
+
+---
+
+## Cloud Updates (2026-01-20 12:25:05)
+
+*Merged from Cloud VM via Git sync*
+
+
+📝 **README.md**
+
+# Updates - Cloud → Local Communication
+
+This folder is used by the **Cloud Agent** to write updates that the **Local Agent** should merge into the Dashboard.
+
+## Purpose
+
+The **single-writer rule** states that only Local should update `Dashboard.md` directly. Cloud writes updates to this folder, and Local merges them.
+
+## Why This Pattern?
+
+**Problem:** If both Cloud and Local write to `Dashboard.md` simultaneously, you get git merge conflicts.
+
+**Solution:** Cloud writes updates to `/Updates/`, Local merges them into `Dashboard.md`.
+
+## Update Types
+
+### Status Updates
+```markdown
+---
+type: status_update
+source: cloud
+timestamp: 2026-01-20T12:00:00Z
+---
+
+## Cloud Status Summary
+
+**Emails Processed:** 15
+**Events Detected:** 3
+**Drafts Created:** 8
+**AI Decisions:** 12 (10 approved, 2 rejected)
+```
+
+### Alert Updates
+```markdown
+---
+type: alert
+source: cloud
+timestamp: 2026-01-20T12:00:00Z
+priority: high
+---
+
+## Alert: High Volume of Emails
+
+Cloud detected 25+ emails in the last hour. Consider reviewing.
+```
+
+### Summary Updates
+```markdown
+---
+type: summary
+source: cloud
+timestamp: 2026-01-20T12:00:00Z
+period: 2026-01-20 11:00 - 12:00
+---
+
+## Hourly Summary
+
+**New Items:** 12
+**Processed:** 10
+**Pending:** 2
+**Errors:** 0
+```
+
+## Dashboard Merger Process
+
+The `dashboard_merger.py` script runs every 2 minutes on Local:
+
+1. Reads all files from `/Updates/`
+2. Merges content into `Dashboard.md`
+3. Deletes processed update files
+4. Logs the merge operation
+
+## Creating Update Files
+
+### Cloud Agent
+
+```python
+from pathlib import Path
+from datetime import datetime
+
+updates_folder = Path("AI_Employee_Vault/Updates")
+
+# Write update
+update_file = updates_folder / f"update_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+update_file.write_text(update_content)
+```
+
+### Local Agent (Automatic)
+
+```bash
+# Dashboard merger runs automatically via PM2 cron
+# No manual action needed - it reads /Updates/ every 2 minutes
+```
+
+## File Naming Convention
+
+- `update_YYYYMMDD_HHMMSS.md` - Timestamped updates
+- `status_*.md` - Status updates
+- `alert_*.md` - Alert notifications
+- `summary_*.md` - Summary reports
+
+## Cleanup
+
+Processed update files are automatically deleted after merging. No manual cleanup needed.
+
+---
+
+*Last Updated: 2026-01-20*
+*System Version: v1.5.0 (Platinum Tier)*
+*Reference: scripts/dashboard_merger.py*
+
+
+---
+
+📡 **README.md**
+
+# Signals - Agent-to-Agent (A2A) Messaging
+
+This folder is reserved for future **Phase 2: Direct A2A Communication**.
+
+## Current Status (Phase 1)
+
+**NOT YET IMPLEMENTED** - Currently, agents communicate by writing files to the vault.
+
+**Phase 1 Communication (Current):**
+- Cloud creates files in `/Needs_Action/`, `/Pending_Approval/`, `/Updates/`
+- Local reads files and processes them
+- Communication is asynchronous via file system
+
+## Future: Phase 2 A2A Messaging
+
+**Planned Communication (Phase 2):**
+- Direct agent-to-agent messages
+- Real-time communication
+- Reduced file overhead
+- Faster coordination
+
+## Planned Signal Types
+
+### Request Signals
+```yaml
+type: request
+from: local
+to: cloud
+action: generate_draft
+target: EMAIL_123.md
+context: Urgent client inquiry
+```
+
+### Response Signals
+```yaml
+type: response
+from: cloud
+to: local
+action: draft_ready
+target: EMAIL_123_DRAFT.md
+status: success
+```
+
+### Notification Signals
+```yaml
+type: notification
+from: cloud
+to: local
+event: new_email
+data:
+  id: EMAIL_456
+  priority: high
+  subject: Urgent: Server down
+```
+
+### Command Signals
+```yaml
+type: command
+from: local
+to: cloud
+action: sync_now
+priority: immediate
+```
+
+## Signal Processing
+
+**Future Implementation:**
+
+```python
+class SignalProcessor:
+    """Process A2A signals for Phase 2"""
+
+    def send_signal(self, signal: dict):
+        """Send signal to another agent"""
+        signal_file = self.signals_folder / f"signal_{uuid.uuid4()}.json"
+        signal_file.write_text(json.dumps(signal))
+
+    def receive_signals(self) -> list:
+        """Read pending signals"""
+        signals = []
+        for signal_file in self.signals_folder.glob("signal_*.json"):
+            signal = json.loads(signal_file.read_text())
+            signals.append(signal)
+            signal_file.unlink()  # Remove after reading
+        return signals
+```
+
+## When to Use Signals vs Files
+
+### Use File-Based Communication (Phase 1)
+- Creating action files
+- Drafting replies/posts
+- Approval workflows
+- Audit logs
+- Long-term storage
+
+### Use A2A Signals (Phase 2)
+- Real-time coordination
+- Request-response patterns
+- Immediate notifications
+- Agent handoffs
+- Status queries
+
+## Migration Path
+
+**Phase 1 → Phase 2 Migration:**
+
+1. Add signal processing to existing agents
+2. Implement signal router
+3. Convert file-based flows to signals where beneficial
+4. Keep vault as audit record
+5. Gradual rollout, testing each flow
+
+## Current Use
+
+**For now, this folder remains empty** and is reserved for future Phase 2 implementation.
+
+---
+
+*Last Updated: 2026-01-20*
+*System Version: v1.5.0 (Platinum Tier)*
+*Phase 2 Status: PLANNED - NOT IMPLEMENTED*
+
+
+---

@@ -225,6 +225,7 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
         except Exception as e:
             logger.error(f"Error stopping browser: {e}")
 
+    @with_retry(max_attempts=3, base_delay=2, max_delay=60)
     def check_for_updates(self) -> List[Dict[str, Any]]:
         """
         Check for new unread WhatsApp messages.

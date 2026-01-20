@@ -277,7 +277,7 @@ module.exports = {
       interpreter: 'python',
       cwd: PROJECT_ROOT,
       instances: 1,
-      autorestart: true,
+      autorestart: false,  // Cron job - no auto-restart
       watch: false,
       max_memory_restart: '200M',
       cron_restart: '*/2 * * * *',  // Every 2 minutes

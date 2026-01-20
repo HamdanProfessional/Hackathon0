@@ -119,6 +119,7 @@ class CalendarWatcher(BaseWatcher):
         self.service = build("calendar", "v3", credentials=creds)
         self.logger.info("Calendar API authenticated successfully")
 
+    @with_retry(max_attempts=3, base_delay=2, max_delay=60)
     def check_for_updates(self) -> List[Dict[str, Any]]:
         """
         Check for upcoming calendar events.
