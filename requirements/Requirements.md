@@ -157,7 +157,7 @@ Estimated time: 40+ hours
 
 2. Full cross-domain integration (Personal \+ Business)
 
-3. Create an accounting system for your business in Odoo Community (self-hosted, local) and integrate it via an MCP server using Odoo’s JSON-RPC APIs (Odoo 19+).
+3. Create an accounting system for your business in Odoo Community (self-hosted, local) and integrate it via an [MCP server](https://github.com/AlanOgic/mcp-odoo-adv) using Odoo’s JSON-RPC APIs (Odoo 19+). 
 
 4. Integrate Facebook and Instagram and post messages and generate summary
 

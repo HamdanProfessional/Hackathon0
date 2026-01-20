@@ -144,7 +144,7 @@ def main():
 
     print()
     print("=" * 60)
-    print("Dashboard Merger: Complete ✅")
+    print("Dashboard Merger: Complete [OK]")
     print("=" * 60)
 
 

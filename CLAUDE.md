@@ -558,18 +558,27 @@ When making changes to the AI Employee system:
 
 ---
 
-*Updated: 2026-01-17*
-**AI-POWERED AUTO-APPROVAL COMPLETE**
-*LinkedIn: ✅ Operational (fast copy-paste method - 100-200x faster)*
-*Twitter/X: ✅ Operational (fast copy-paste method - 100-200x faster)*
-*Instagram: ✅ Operational (6 professional color themes, decorative borders)*
-*Facebook: ✅ Operational (direct content insertion with blur event handling)*
-*AI Auto-Approver: ✅ NEW - Claude 3 Haiku makes intelligent approval decisions*
+*Updated: 2026-01-20*
+**GOLD TIER COMPLETE - Cross-Domain Integration**
+*LinkedIn: ✅ Operational with summary generation*
+*Twitter/X: ✅ Operational with summary generation*
+*Instagram: ✅ Operational with summary generation*
+*Facebook: ✅ Operational with summary generation*
+*Cross-Domain Coordination: ✅ NEW - Personal/Business domain classification*
+*AI Auto-Approver: ✅ Claude 3 Haiku makes intelligent approval decisions*
 *All approval monitors in LIVE mode*
 *19 PM2 processes running (0 crashes)*
-*100% Platinum Tier Complete (AI + Human-in-the-Loop)*
+*100% Gold Tier Complete (Full cross-domain integration)*
 
-**Recent Improvements (v1.3.0):**
+**Recent Improvements (v1.4.0):**
+- 🎯 **Cross-Domain Coordination** - Personal vs Business domain classification and routing
+- 📊 **Cross-Domain Insights** - Unified reports across Personal and Business domains
+- 🔄 **Domain Classifier** - Automatic classification of emails, tasks, and events
+- ⚖️ **Work-Life Balance Tracking** - Monitor personal vs business task distribution
+- 📝 **Social Media Summaries** - All platforms now generate post summaries in Briefings/
+- 🔍 **Conflict Detection** - Automatic detection of cross-domain scheduling conflicts
+
+**Previous Improvements (v1.3.0):**
 - ✨ **AI-Powered Auto-Approver** - Claude 3 Haiku integration for intelligent decisions
 - 🧠 **Smart Approval Logic** - Auto-approves safe actions, rejects scams, flags for review
 - 🔄 **Continuous Processing** - Checks every 2 minutes instead of manual review
@@ -577,5 +586,52 @@ When making changes to the AI Employee system:
 - 🎨 **6 Professional Instagram Themes** - Midnight Purple, Ocean Blue, Sunset Orange, Forest Green, Royal Gold, Deep Navy
 - ⚡ **Fast Copy-Paste Method** for LinkedIn & Twitter (100-200x speed improvement)
 - 🔧 **Vault Structure Fix** - Removed nested AI_Employee_Vault/AI_Employee_Vault/ duplication
-- 📝 **Complete changelog** - v1.3.0 with all improvements documented
 - 🚀 **All 19 PM2 processes running** - 15 continuous, 4 scheduled
+
+---
+
+## Gold Tier Features
+
+### Cross-Domain Coordination (NEW)
+
+**Domain Classification:**
+- **Personal Domain:** Health, family, personal finance, education, hobbies
+- **Business Domain:** Clients, invoices, projects, social media, accounting
+- **Shared Domain:** Items affecting both (urgent tasks, reminders, scheduling)
+
+**Usage:**
+```bash
+# Generate cross-domain insights
+python scripts/cross_domain_insights.py --vault AI_Employee_Vault
+
+# Test domain classifier
+python -m watchers.domain_classifier
+```
+
+**Domain-Specific Folders:**
+- `/Needs_Action/Personal/` - Personal tasks and events
+- `/Needs_Action/Business/` - Business tasks and events
+- `/Needs_Action/Shared/` - Items affecting both domains
+
+**Integration:**
+```python
+from watchers.domain_classifier import classify_domain, Domain
+
+domain = classify_domain(
+    subject="Invoice #1234 from Acme Corp",
+    content="Please find attached invoice",
+    sender="billing@acmecorp.com",
+    source="gmail"
+)
+# Returns: Domain.BUSINESS
+```
+
+### Social Media Summary Generation
+
+All social media platforms now generate summaries after posting:
+- **Twitter/X:** Tweet summaries with character count and engagement tracking
+- **Facebook:** Post summaries with content preview and next steps
+- **Instagram:** Post summaries with hashtag performance tracking
+- **LinkedIn:** Post summaries with professional engagement metrics
+
+Summaries are saved to `/Briefings/` folder.

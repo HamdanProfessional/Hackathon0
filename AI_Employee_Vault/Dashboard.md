@@ -1,49 +1,45 @@
 # Personal AI Employee Dashboard
 
-**Last Updated:** 2026-01-17
-**System Version:** v1.3.0
-**System Status:** All Systems Operational
+**Last Updated:** 2026-01-20
+**System Version:** v1.5.0 (Platinum Tier)
+**System Status:** All Systems Operational - Platinum Tier Complete
 
 ---
 
 ## System Overview
 
-**Total PM2 Processes:** 19 (15 continuous, 4 scheduled)
-**Active Watchers:** 6
-**Active Approval Monitors:** 6
-**AI Auto-Approver:** 1
-**Scheduled Jobs:** 4
+**Platinum Tier Architecture:** Cloud + Local Hybrid
+- **Cloud VM:** 143.244.143.143 (24/7 Detection + AI Triage + Draft Creation)
+- **Local Machine:** Approvals + Final Execution
+- **Total Processes:** 19 (8 Cloud + 11 Local)
+- **Git Sync:** Every 5 minutes between Cloud and Local
 
 ### Core Architecture
 ```
-Perception (Watchers) → AI Auto-Approver → Human Review → Action (Monitors) → Done
-                         ↓                      ↓
-                   Claude 3 Haiku         Pending_Approval/
-                   (decisions)            (manual review)
+Cloud (24/7) → Git Sync → Local (Executive)
+  Detection                   Drafts                    Approvals
+    +                         +                          +
+  AI Triage                 Review                    Execution
 ```
 
 ---
 
 ## System Status
 
-### All Systems Operational ✅
+### Platinum Tier Complete ✅
 
-| Component                 | Status                         | PID   | Uptime | Restarts |
-| ------------------------- | ------------------------------ | ----- | ------ | -------- |
-| gmail-watcher             | 🟢 Online                      | TBD   | TBD    | 0        |
-| calendar-watcher          | 🟢 Online                      | TBD   | TBD    | 0        |
-| slack-watcher             | 🟢 Online                      | TBD   | TBD    | 0        |
-| odoo-watcher              | 🟢 Online                      | TBD   | TBD    | 0        |
-| filesystem-watcher        | 🟢 Online                      | TBD   | TBD    | 0        |
-| whatsapp-watcher          | 🟢 Online                      | TBD   | TBD    | 0        |
-| **auto-approver**         | 🟢 **AI-Powered** (Claude 3)   | TBD   | TBD    | 0        |
-| email-approval-monitor    | 🟢 Online                      | TBD   | TBD    | 0        |
-| calendar-approval-monitor | 🟢 Online                      | TBD   | TBD    | 0        |
-| slack-approval-monitor    | 🟢 Online                      | TBD   | TBD    | 0        |
-| linkedin-approval-monitor | 🟢 Online                      | TBD   | TBD    | 0        |
-| twitter-approval-monitor  | 🟢 Online                      | TBD   | TBD    | 0        |
-| facebook-approval-monitor | 🟢 Online                      | TBD   | TBD    | 0        |
-| instagram-approval-monitor| 🟢 Online                      | TBD   | TBD    | 0        |
+| Component                 | Status                         | Location  |
+| ------------------------- | ------------------------------ | --------- |
+| **Cloud VM**              | 🟢 **Online** (24/7)            | Remote    |
+| gmail-watcher (Cloud)     | 🟢 Online                      | Cloud     |
+| calendar-watcher (Cloud)  | 🟢 Online                      | Cloud     |
+| slack-watcher (Cloud)     | 🟢 Online                      | Cloud     |
+| odoo-watcher (Cloud)      | 🟢 Online                      | Cloud     |
+| auto-approver (Cloud)      | 🟢 **AI-Powered** (Claude 3)   | Cloud     |
+| git-sync-push (Cloud)      | 🟢 Online                      | Cloud     |
+| **Local Machine**          | 🟢 **Online** (when available)  | Local     |
+| whatsapp-watcher (Local)   | 🟢 Online                      | Local     |
+| filesystem-watcher (Local) | 🟢 Online                      | Local     |
 | ai-employee-dashboard     | 🟢 Online (Port 3000)          | TBD   | TBD    | 0        |
 | monday-ceo-briefing       | ⏸️ Scheduled (Mon 7AM)         | -     | -      | 0        |
 | daily-review              | ⏸️ Scheduled (Weekdays 6AM)    | -     | -      | 0        |
@@ -197,7 +193,9 @@ pm2 restart auto-approver
 ## Features
 
 ### ✅ Implemented
-- **AI-Powered Auto-Approver** - Claude 3 Haiku makes intelligent approval decisions (NEW!)
+- **AI-Powered Auto-Approver** - Claude 3 Haiku makes intelligent approval decisions
+- **Cross-Domain Coordination** - Personal vs Business domain classification and routing (NEW!)
+- **Social Media Summary Generation** - All platforms generate post summaries (NEW!)
 - **Ralph Wiggum Autonomous Task Execution** - Continuous loop for complex tasks
 - **Monday Morning CEO Briefing** - Automated business performance audit
 - **Social Media Posting** - LinkedIn, Twitter, Instagram, Facebook (all platforms)
@@ -212,8 +210,16 @@ pm2 restart auto-approver
 - **Social Media Scheduler** - Mon/Wed/Fri at 8AM
 - **Audit Log Cleanup** - Sundays at 3AM
 
-### 🎯 Platinum Tier Complete
-All 19 processes operational with AI-powered decision making and 0 crashes.
+### 🎯 Gold Tier Complete
+All Gold Tier requirements fulfilled:
+- ✅ Full cross-domain integration (Personal + Business)
+- ✅ Facebook & Instagram posting with summaries
+- ✅ Twitter/X posting with summaries
+- ✅ Multiple MCP servers for different actions
+- ✅ Weekly Business and Accounting Audit with CEO Briefing
+- ✅ Error recovery and graceful degradation
+- ✅ Comprehensive audit logging
+- ✅ Ralph Wiggum loop for autonomous task completion
 
 ---
 
@@ -221,6 +227,21 @@ All 19 processes operational with AI-powered decision making and 0 crashes.
 
 This dashboard is automatically updated by your AI Employee. Edit manually to add personal notes or override system-generated content.
 
-**System Version:** v1.3.0
-**Last System Update:** 2026-01-17
+**System Version:** v1.4.0 (Gold Tier Complete)
+**Last System Update:** 2026-01-20
+**Gold Tier Documentation:** [docs/GOLD_TIER_COMPLETION.md](../docs/GOLD_TIER_COMPLETION.md)
 **Next Daily Briefing:** Monday 7:00 AM
+
+---
+
+## Cross-Domain Insights
+
+Generate unified insights across Personal and Business domains:
+```bash
+python scripts/cross_domain_insights.py --vault AI_Employee_Vault
+```
+
+### Domain Structure
+- `/Needs_Action/Personal/` - Personal tasks (health, family, hobbies)
+- `/Needs_Action/Business/` - Business tasks (clients, invoices, projects)
+- `/Needs_Action/Shared/` - Shared items (urgent, scheduling, reminders)
