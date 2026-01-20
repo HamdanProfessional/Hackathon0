@@ -548,6 +548,12 @@ When making changes to the AI Employee system:
 - `docs/hackathon0.md` - Complete project blueprint and requirements
 - `docs/ARCHITECTURE.md` - Detailed system architecture
 
+**MCP Servers:**
+- `mcp-servers/filesystem-mcp/` - Filesystem operations (watch, read, write files)
+- `mcp-servers/email-mcp/` - Gmail integration
+- `mcp-servers/slack-mcp/` - Slack integration
+- `mcp-servers/calendar-mcp/` - Google Calendar integration
+
 **Ralph (Autonomous Task Execution):**
 - `.claude/skills/ralph/SKILL.md` - Ralph skill definition
 - `.claude/skills/ralph/README.md` - Ralph user guide

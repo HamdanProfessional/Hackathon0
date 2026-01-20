@@ -1,0 +1,33 @@
+{
+  "name": "filesystem-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for filesystem operations - Watch folders, read/write files, manage directories",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js",
+    "watch": "tsc --watch"
+  },
+  "keywords": [
+    "mcp",
+    "filesystem",
+    "watcher",
+    "file-management"
+  ],
+  "author": "Personal AI Employee",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "chokidar": "^4.0.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
