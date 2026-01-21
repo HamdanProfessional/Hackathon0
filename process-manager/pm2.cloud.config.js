@@ -142,14 +142,17 @@ module.exports = {
 
     {
       name: 'git-sync-push',
-      script: './scripts/git_sync_push.sh',
+      script: path.join(PROJECT_ROOT, 'scripts', 'git_sync_push.sh'),
       cwd: PROJECT_ROOT,
       instances: 1,
-      autorestart: false,
-      cron_restart: '*/5 * * * *',
+      autorestart: true,
+      exec_mode: 'fork',
       watch: false,
+      max_restarts: 10,
+      restart_delay: 5000,
+      cron_restart: '*/5 * * * *',
       env: {
-        'PYTHONUNBUFFERED': '1'
+        'PATH': '/usr/local/bin:/usr/bin:/bin:/root/.local/bin'
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'git-sync-push-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'git-sync-push-out.log'),

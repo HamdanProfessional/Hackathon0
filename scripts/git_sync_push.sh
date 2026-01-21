@@ -15,6 +15,28 @@ cd "$REPO_DIR"
 
 echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Git Sync Push: Starting..."
 
+# Ensure git is configured
+if ! git config user.name >/dev/null 2>&1; then
+    echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Configuring git user..."
+    git config user.name "AI Employee Cloud"
+    git config user.email "cloud@aitemployee.local"
+fi
+
+# Fetch first to check for remote changes
+echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Fetching remote changes..."
+git fetch origin main || echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Warning: Fetch failed, continuing..."
+
+# Check for diverged branches
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse origin/main 2>/dev/null || echo "$LOCAL")
+BASE=$(git merge-base HEAD origin/main 2>/dev/null || echo "$LOCAL")
+
+if [ "$LOCAL" != "$REMOTE" ] && [ "$LOCAL" != "$BASE" ]; then
+    echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] WARNING: Local and remote have diverged!"
+    echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Pulling remote changes first..."
+    git pull origin main --no-edit || echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Warning: Pull failed, continuing..."
+fi
+
 # Stage all changes
 echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Staging changes..."
 git add -A
@@ -43,8 +65,21 @@ Changes:
 
 ⚠️  Secrets excluded via .gitignore" || echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] No new commits (nothing to commit)"
 
-# Push to remote
+# Push to remote with retry
 echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Pushing to remote..."
-git push origin main
+MAX_RETRIES=3
+RETRY_COUNT=0
 
-echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Git Sync Push: Complete ✅"
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if git push origin main 2>&1; then
+        echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Git Sync Push: Complete ✅"
+        exit 0
+    fi
+
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Push failed (attempt $RETRY_COUNT/$MAX_RETRIES), retrying in 10s..."
+    sleep 10
+done
+
+echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] ERROR: Push failed after $MAX_RETRIES attempts"
+exit 1
