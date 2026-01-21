@@ -374,7 +374,9 @@ module.exports = {
       env: {
         'PYTHONUNBUFFERED': '1',
         'PYTHONIOENCODING': 'utf-8',
-        'PYTHONPATH': PROJECT_ROOT
+        'PYTHONPATH': PROJECT_ROOT,
+        'GLM_API_KEY': 'c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM',
+        'GLM_API_URL': 'https://api.z.ai/api/coding/paas/v4'
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'research-processor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'research-processor-out.log'),
