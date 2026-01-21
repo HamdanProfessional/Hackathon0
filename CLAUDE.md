@@ -564,19 +564,26 @@ When making changes to the AI Employee system:
 
 ---
 
-*Updated: 2026-01-20*
-**GOLD TIER COMPLETE - Cross-Domain Integration**
+*Updated: 2026-01-21*
+**Production System - Cloud + Local Architecture**
 *LinkedIn: ✅ Operational with summary generation*
 *Twitter/X: ✅ Operational with summary generation*
 *Instagram: ✅ Operational with summary generation*
 *Facebook: ✅ Operational with summary generation*
-*Cross-Domain Coordination: ✅ NEW - Personal/Business domain classification*
-*AI Auto-Approver: ✅ Claude 3 Haiku makes intelligent approval decisions*
+*Cross-Domain Coordination: ✅ Personal/Business domain classification*
+*AI Auto-Approver: ✅ Claude 3 makes intelligent approval decisions*
 *All approval monitors in LIVE mode*
-*19 PM2 processes running (0 crashes)*
-*100% Gold Tier Complete (Full cross-domain integration)*
+*20 PM2 processes running (0 crashes)*
+*Research LinkedIn Generator: ✅ Daily automated research & posting*
 
-**Recent Improvements (v1.4.0):**
+**Recent Improvements (v1.5.0):**
+- 🔬 **Research LinkedIn Generator** - Daily automated research with GLM API
+- 🛡️ **Security Hardening** - Removed hardcoded credentials, added UTF-8 encoding
+- ⚡ **Performance Fixes** - Circuit breaker pattern, LRU eviction, reduced restarts
+- 🔄 **Git Sync Improvements** - Auto-retry, diverged branch detection
+- 📊 **LinkedIn Post Extraction** - Fixed to extract only post content, not metadata
+
+**Previous Improvements (v1.4.0):**
 - 🎯 **Cross-Domain Coordination** - Personal vs Business domain classification and routing
 - 📊 **Cross-Domain Insights** - Unified reports across Personal and Business domains
 - 🔄 **Domain Classifier** - Automatic classification of emails, tasks, and events
@@ -584,19 +591,9 @@ When making changes to the AI Employee system:
 - 📝 **Social Media Summaries** - All platforms now generate post summaries in Briefings/
 - 🔍 **Conflict Detection** - Automatic detection of cross-domain scheduling conflicts
 
-**Previous Improvements (v1.3.0):**
-- ✨ **AI-Powered Auto-Approver** - Claude 3 Haiku integration for intelligent decisions
-- 🧠 **Smart Approval Logic** - Auto-approves safe actions, rejects scams, flags for review
-- 🔄 **Continuous Processing** - Checks every 2 minutes instead of manual review
-- 📊 **Odoo Integration** - Local-first accounting with XML-RPC
-- 🎨 **6 Professional Instagram Themes** - Midnight Purple, Ocean Blue, Sunset Orange, Forest Green, Royal Gold, Deep Navy
-- ⚡ **Fast Copy-Paste Method** for LinkedIn & Twitter (100-200x speed improvement)
-- 🔧 **Vault Structure Fix** - Removed nested AI_Employee_Vault/AI_Employee_Vault/ duplication
-- 🚀 **All 19 PM2 processes running** - 15 continuous, 4 scheduled
-
 ---
 
-## Gold Tier Features
+## Production Features
 
 ### Cross-Domain Coordination (NEW)
 

@@ -32,7 +32,6 @@ module.exports = {
     {
       name: 'whatsapp-watcher',
       script: 'python',
-      interpreter: 'none',
       args: '-m watchers.whatsapp_watcher_playwright --vault ' + VAULT_PATH + ' --session ./whatsapp_session',
       cwd: PROJECT_ROOT,
       instances: 1,
@@ -52,7 +51,6 @@ module.exports = {
     {
       name: 'filesystem-watcher',
       script: 'python',
-      interpreter: 'none',
       args: '-m watchers.filesystem_watcher --vault ' + VAULT_PATH + ' --watch-folder ' + path.join(VAULT_PATH, 'Inbox'),
       cwd: PROJECT_ROOT,
       instances: 1,
@@ -339,7 +337,7 @@ module.exports = {
 
     {
       name: 'audit-log-cleanup',
-      script: path.join(PROJECT_ROOT, 'scripts', 'audit_log_cleanup.py'),
+      script: path.join(PROJECT_ROOT, 'scripts', 'cleanup_old_logs.py'),
       args: '--vault ' + VAULT_PATH + ' --days 30',
       interpreter: 'python',
       cwd: PROJECT_ROOT,
