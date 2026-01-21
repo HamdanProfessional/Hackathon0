@@ -415,7 +415,7 @@ action: post_to_linkedin
 platform: linkedin
 created: {datetime.now().isoformat()}
 expires: {(datetime.now() + timedelta(days=7)).isoformat()}
-status: pending_approval
+status: pending
 research_topic: {topic}
 sources_count: {len(sources)}
 char_count: {len(post)}

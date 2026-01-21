@@ -68,6 +68,32 @@ module.exports = {
     },
 
     // ============================================================
+    // AI AUTO-APPROVER (Email Triage + Draft Replies)
+    // ============================================================
+
+    {
+      name: 'auto-approver',
+      script: path.join(PROJECT_ROOT, '.claude', 'skills', 'approval-manager', 'scripts', 'auto_approver.py'),
+      interpreter: 'python',
+      args: '--vault ' + VAULT_PATH + ' --once',
+      cwd: PROJECT_ROOT,
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '500M',
+      cron_restart: '*/2 * * * *',  // Every 2 minutes
+      env: {
+        'ANTHROPIC_API_KEY': process.env.ANTHROPIC_API_KEY || '',
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
+      },
+      error_file: path.join(PROJECT_ROOT, 'logs', 'auto-approver-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'auto-approver-out.log'),
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+
+    // ============================================================
     // LOCAL APPROVAL MONITORS (Execute Approved Actions)
     // ============================================================
 

@@ -141,7 +141,7 @@ created: {timestamp}
 
 ### Phase 5: Approval Workflow
 
-**Create approval file** at `AI_Employee_Vault/Pending_Approval/LINKEDIN_POST_{timestamp}_{topic_slug}.md`:
+**Create approval file** with `status: pending` (auto-approver will route to `Pending_Approval/`):
 
 ```markdown
 ---
@@ -150,7 +150,7 @@ action: post_to_linkedin
 platform: linkedin
 created: {timestamp}
 expires: {expires_24h_later}
-status: pending_approval
+status: pending
 topic: {topic}
 research_sources: {count}
 ---
@@ -179,6 +179,8 @@ This post will be published to LinkedIn when approved.
 **To Edit**: Edit content above, then move to `Approved/`
 ```
 
+**Workflow**: File created → Auto-approver moves to `Pending_Approval/` → User reviews → Move to `Approved/` → Posted
+
 **Notify user**: "LinkedIn post ready for review. Check `Pending_Approval/` folder."
 
 ---
@@ -193,8 +195,10 @@ AI_Employee_Vault/
 │   └── RESEARCH_REQUEST_{topic}.md          # User requests
 ├── Plans/
 │   └── RESEARCH_{topic}_{timestamp}.md       # Research data
+├── Needs_Action/
+│   └── LINKEDIN_POST_{timestamp}_{slug}.md  # Initial creation (status: pending)
 ├── Pending_Approval/
-│   └── LINKEDIN_POST_{timestamp}_{slug}.md  # Approval request
+│   └── LINKEDIN_POST_{timestamp}_{slug}.md  # Auto-approver moves here
 ├── Approved/
 │   └── LINKEDIN_POST_{timestamp}_{slug}.md  # Ready to post
 ├── Rejected/

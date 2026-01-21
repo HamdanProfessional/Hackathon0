@@ -5,7 +5,7 @@ echo ============================================================
 echo.
 
 echo Starting Chrome CDP...
-start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" "--user-data-dir=C:\Users\User\AppData\Local\Google\Chrome\User Data" --remote-debugging-port=9222
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --user-data-dir=C:\Users\User\AppData\Local\Google\Chrome\USERDA~1 --remote-debugging-port=9222
 
 echo.
 echo Waiting 5 seconds for Chrome to initialize...
@@ -18,7 +18,7 @@ if %errorlevel% equ 0 (
     echo ============================================================
     echo SUCCESS! Chrome CDP is RUNNING!
     echo.
-    echo Profile: C:\Users\User\AppData\Local\Google\Chrome\User Data
+    echo Profile: C:\Users\User\AppData\Local\Google\Chrome\USERDA~1 (User Data)
     echo CDP Port: 9222
     echo.
     echo You can now test the MCP wrappers:

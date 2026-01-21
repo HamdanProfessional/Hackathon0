@@ -56,7 +56,8 @@ Request → Research (Google) → Extract (8-10 sources) → Analyze → Draft P
    - Cites all sources
 
 5. **Approval** (Manual)
-   - File created in `Pending_Approval/`
+   - File created with `status: pending` in `Needs_Action/`
+   - Auto-approver moves to `Pending_Approval/` (marks as manual review)
    - You review, edit, or reject
    - Move to `Approved/` to publish
 
@@ -76,7 +77,7 @@ action: post_to_linkedin
 platform: linkedin
 created: 2026-01-20T14:30:00Z
 expires: 2026-01-21T14:30:00Z
-status: pending_approval
+status: pending
 topic: AI in manufacturing 2024
 research_sources: 8
 ---
@@ -157,7 +158,8 @@ scripts/social-media/START_AUTOMATION_CHROME.bat
 |-------|--------|--------------|
 | Request | Inbox/ | RESEARCH_REQUEST_*.md |
 | Research | Plans/ | RESEARCH_{topic}_*.md |
-| Approval | Pending_Approval/ | LINKEDIN_POST_*.md |
+| Initial | Needs_Action/ | LINKEDIN_POST_*.md (status: pending) |
+| Approval | Pending_Approval/ | LINKEDIN_POST_*.md (after auto-approver) |
 | Published | Done/ | LINKEDIN_POST_*.md |
 | Summary | Done/ | LINKEDIN_POST_SUMMARY_*.md |
 
