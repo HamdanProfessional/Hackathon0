@@ -250,6 +250,25 @@ module.exports = {
       }
     },
 
+    // ==================== A2A MESSAGE BROKER ====================
+    {
+      name: "a2a-message-broker",
+      script: path.join(PROJECT_ROOT, "scripts", "a2a_message_broker.py"),
+      args: "--vault " + VAULT_PATH,
+      interpreter: "python",
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      max_restarts: 10,
+      max_memory_restart: "500M",
+      env: {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONPATH": PROJECT_ROOT,
+        "BROKER_CHECK_INTERVAL": "5"
+      }
+    },
+
     // ==================== CRON JOBS ====================
     {
       name: "monday-ceo-briefing",

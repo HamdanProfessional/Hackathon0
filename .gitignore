@@ -138,5 +138,19 @@ __pycache__/
 # Claude Code config (contains API tokens)
 .claude/config.json
 
+# A2A Messaging - ephemeral message queues
+AI_Employee_Vault/Signals/Inbox/*/
+AI_Employee_Vault/Signals/Outbox/
+AI_Employee_Vault/Signals/Pending/
+AI_Employee_Vault/Signals/Processing/
+AI_Employee_Vault/Signals/Failed/
+AI_Employee_Vault/Signals/Dead_Letter/
+AI_Employee_Vault/.agent_registry.json
+AI_Employee_Vault/.a2a_secret
+
 # Tools with hardcoded credentials
 tools/
+chrome_automation_profile
+node_modules
+/node_modules
+node_modules/

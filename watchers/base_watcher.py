@@ -11,7 +11,15 @@ import logging
 from pathlib import Path
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Dict
+
+# A2A Messaging imports
+try:
+    from utils.a2a_messenger import A2AMessenger, MessageType, MessagePriority
+    from utils.agent_registry import AgentRegistry, AgentRole, HeartbeatSender
+    A2A_AVAILABLE = True
+except ImportError:
+    A2A_AVAILABLE = False
 
 
 def setup_logging(name: str) -> logging.Logger:
@@ -46,6 +54,8 @@ class BaseWatcher(ABC):
         dry_run: bool = False,
         max_consecutive_failures: int = 5,
         circuit_breaker_backoff: int = 300,
+        enable_a2a: bool = True,
+        a2a_heartbeat_interval: int = 60,
     ):
         """
         Initialize the watcher.
@@ -56,6 +66,8 @@ class BaseWatcher(ABC):
             dry_run: If True, log actions but don't create files
             max_consecutive_failures: Max consecutive errors before triggering circuit breaker (default: 5)
             circuit_breaker_backoff: Base backoff time in seconds when circuit breaker triggers (default: 300)
+            enable_a2a: Enable A2A messaging (default: True)
+            a2a_heartbeat_interval: Seconds between A2A heartbeats (default: 60)
         """
         self.vault_path = Path(vault_path)
         self.needs_action = self.vault_path / "Needs_Action"
@@ -64,6 +76,8 @@ class BaseWatcher(ABC):
         self.dry_run = dry_run
         self.max_consecutive_failures = max_consecutive_failures
         self.circuit_breaker_backoff = circuit_breaker_backoff
+        self.enable_a2a = enable_a2a and A2A_AVAILABLE
+        self.a2a_heartbeat_interval = a2a_heartbeat_interval
 
         # Circuit breaker state
         self.consecutive_failures = 0
@@ -73,10 +87,276 @@ class BaseWatcher(ABC):
         self.logger = setup_logging(self.__class__.__name__)
         self._ensure_folders()
 
+        # A2A Messaging components
+        self._a2a_messenger: Optional[A2AMessenger] = None
+        self._a2a_registry: Optional[AgentRegistry] = None
+        self._a2a_heartbeat: Optional[HeartbeatSender] = None
+
+        # Initialize A2A if enabled
+        if self.enable_a2a:
+            self._init_a2a()
+
     def _ensure_folders(self) -> None:
         """Ensure required folders exist."""
         self.needs_action.mkdir(parents=True, exist_ok=True)
         self.logs_path.mkdir(parents=True, exist_ok=True)
+
+    # ========================================================================
+    # A2A Messaging Methods
+    # ========================================================================
+
+    def _init_a2a(self) -> None:
+        """Initialize A2A messaging components."""
+        try:
+            agent_id = self._get_agent_id()
+
+            # Initialize messenger
+            self._a2a_messenger = A2AMessenger(
+                vault_path=str(self.vault_path),
+                agent_id=agent_id
+            )
+
+            # Initialize registry
+            self._a2a_registry = AgentRegistry(str(self.vault_path))
+
+            # Register this agent
+            self._register_as_agent()
+
+            # Start heartbeat sender
+            self._a2a_heartbeat = HeartbeatSender(
+                registry=self._a2a_registry,
+                agent_id=agent_id,
+                interval_seconds=self.a2a_heartbeat_interval
+            )
+            self._a2a_heartbeat.start()
+
+            self.logger.info(f"A2A messaging initialized for agent: {agent_id}")
+
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize A2A messaging: {e}")
+            self.enable_a2a = False
+
+    def _get_agent_id(self) -> str:
+        """
+        Get the agent ID for this watcher.
+
+        Default implementation uses the class name in lowercase with hyphens.
+        Subclasses can override for custom agent IDs.
+
+        Returns:
+            Agent ID string
+        """
+        # Convert class name to agent ID (e.g., GmailWatcher -> gmail-watcher)
+        class_name = self.__class__.__name__
+        # Insert hyphens before capital letters (except first)
+        import re
+        agent_id = re.sub(r'(?<!^)(?=[A-Z])', '-', class_name).lower()
+        return agent_id
+
+    def _get_agent_capabilities(self) -> List[str]:
+        """
+        Get the capabilities of this agent.
+
+        Subclasses can override to advertise specific capabilities.
+
+        Returns:
+            List of capability strings
+        """
+        class_name = self.__class__.__name__
+        service = class_name.replace("Watcher", "").lower()
+        return [
+            f"{service}_detection",
+            f"{service}_monitoring",
+            "action_file_creation"
+        ]
+
+    def _get_agent_role(self) -> AgentRole:
+        """
+        Get the role of this agent.
+
+        Returns:
+            AgentRole enum value
+        """
+        return AgentRole.WATCHER
+
+    def _register_as_agent(self) -> None:
+        """Register this watcher as an agent in the registry."""
+        if not self._a2a_registry or not self._a2a_messenger:
+            return
+
+        agent_id = self._get_agent_id()
+
+        self._a2a_registry.register(
+            agent_id=agent_id,
+            capabilities=self._get_agent_capabilities(),
+            role=self._get_agent_role(),
+            metadata={
+                "class": self.__class__.__name__,
+                "check_interval": self.check_interval,
+                "dry_run": self.dry_run,
+            }
+        )
+
+        self.logger.info(f"Registered agent: {agent_id}")
+
+    def _send_a2a_message(
+        self,
+        to_agent: str,
+        message_type: MessageType = "notification",
+        subject: str = "",
+        payload: Optional[Dict[str, Any]] = None,
+        priority: MessagePriority = "normal",
+        correlation_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Send an A2A message to another agent.
+
+        Args:
+            to_agent: Recipient agent ID
+            message_type: Type of message (request, response, notification, etc.)
+            subject: Message subject line
+            payload: Message data
+            priority: Message priority
+            correlation_id: Optional correlation ID for request/response tracking
+
+        Returns:
+            Message ID if sent, None if A2A is disabled
+        """
+        if not self.enable_a2a or not self._a2a_messenger:
+            self.logger.debug("A2A messaging disabled, skipping message send")
+            return None
+
+        try:
+            msg_id = self._a2a_messenger.send_message(
+                to_agent=to_agent,
+                message_type=message_type,
+                subject=subject or f"Message from {self._get_agent_id()}",
+                payload=payload or {},
+                priority=priority,
+                correlation_id=correlation_id,
+            )
+
+            self.logger.debug(
+                f"Sent A2A message {msg_id} to {to_agent}: {subject}"
+            )
+            return msg_id
+
+        except Exception as e:
+            self.logger.error(f"Failed to send A2A message: {e}")
+            return None
+
+    def _receive_a2a_messages(
+        self,
+        status: Optional[str] = None,
+        include_expired: bool = False
+    ) -> List[Any]:
+        """
+        Receive pending A2A messages for this agent.
+
+        Args:
+            status: Optional filter by message status
+            include_expired: Whether to include expired messages
+
+        Returns:
+            List of pending messages
+        """
+        if not self.enable_a2a or not self._a2a_messenger:
+            return []
+
+        try:
+            messages = self._a2a_messenger.receive_messages(
+                status=status,
+                include_expired=include_expired
+            )
+
+            if messages:
+                self.logger.debug(f"Received {len(messages)} A2A messages")
+
+            return messages
+
+        except Exception as e:
+            self.logger.error(f"Failed to receive A2A messages: {e}")
+            return []
+
+    def _acknowledge_a2a_message(
+        self,
+        message_id: str,
+        result: str = "success",
+        error_message: Optional[str] = None,
+        response_payload: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Acknowledge processing of an A2A message.
+
+        Args:
+            message_id: Message ID being acknowledged
+            result: Processing result ("success" or "failure")
+            error_message: Optional error message on failure
+            response_payload: Optional response data
+        """
+        if not self.enable_a2a or not self._a2a_messenger:
+            return
+
+        try:
+            self._a2a_messenger.acknowledge_message(
+                message_id=message_id,
+                result=result,
+                error_message=error_message,
+                response_payload=response_payload
+            )
+
+            self.logger.debug(f"Acknowledged A2A message {message_id}: {result}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to acknowledge A2A message: {e}")
+
+    def _update_a2a_heartbeat(
+        self,
+        status: str = "online",
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Update the heartbeat for this agent.
+
+        Args:
+            status: Agent status ("online", "offline", "degraded", "maintenance")
+            metadata: Optional metadata to update
+        """
+        if not self.enable_a2a or not self._a2a_registry:
+            return
+
+        try:
+            # The HeartbeatSender handles periodic heartbeats automatically
+            # This method is for explicit status updates
+            agent_id = self._get_agent_id()
+            self._a2a_registry.update_status(
+                agent_id=agent_id,
+                status=self._a2a_registry.AgentStatus(status),
+                metadata=metadata
+            )
+
+            self.logger.debug(f"Updated A2A heartbeat status: {status}")
+
+        except Exception as e:
+            self.logger.error(f"Failed to update heartbeat: {e}")
+
+    def _shutdown_a2a(self) -> None:
+        """Shutdown A2A messaging components."""
+        if self._a2a_heartbeat:
+            self._a2a_heartbeat.stop()
+
+        if self._a2a_registry and self._a2a_messenger:
+            agent_id = self._get_agent_id()
+            self._a2a_registry.unregister(agent_id)
+
+        self.logger.info("A2A messaging shut down")
+
+    def __del__(self):
+        """Cleanup on deletion."""
+        try:
+            self._shutdown_a2a()
+        except Exception:
+            pass
 
     @abstractmethod
     def check_for_updates(self) -> List[Any]:
