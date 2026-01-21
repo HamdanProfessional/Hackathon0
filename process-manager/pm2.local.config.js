@@ -180,7 +180,7 @@ module.exports = {
 
     {
       name: 'facebook-approval-monitor',
-      script: path.join(PROJECT_ROOT, '.claude', 'skills', 'facebook-instagram-manager', 'scripts', 'facebook_approval_monitor.py'),
+      script: path.join(PROJECT_ROOT, '.claude', 'skills', 'facebook-instagram-manager', 'scripts', 'facebook-approval-monitor.py'),
       interpreter: 'python',
       args: '--vault ' + VAULT_PATH,
       cwd: PROJECT_ROOT,
@@ -201,7 +201,7 @@ module.exports = {
 
     {
       name: 'instagram-approval-monitor',
-      script: path.join(PROJECT_ROOT, '.claude', 'skills', 'facebook-instagram-manager', 'scripts', 'instagram_approval_monitor.py'),
+      script: path.join(PROJECT_ROOT, '.claude', 'skills', 'facebook-instagram-manager', 'scripts', 'instagram-approval-monitor.py'),
       interpreter: 'python',
       args: '--vault ' + VAULT_PATH,
       cwd: PROJECT_ROOT,
@@ -357,28 +357,8 @@ module.exports = {
     },
 
     // ============================================================
-    // SOCIAL MEDIA SCHEDULER (Draft Creation Only - Optional)
+    // SOCIAL MEDIA SCHEDULER - Disabled (script does not exist)
     // ============================================================
-
-    {
-      name: 'social-media-scheduler',
-      script: path.join(PROJECT_ROOT, 'scripts', 'social_media_scheduler.py'),
-      args: '--vault ' + VAULT_PATH + ' --mode draft',
-      interpreter: 'python',
-      cwd: PROJECT_ROOT,
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '300M',
-      cron_restart: '0 */4 * * *',  // Every 4 hours
-      env: {
-        'PYTHONUNBUFFERED': '1',
-        'PYTHONIOENCODING': 'utf-8',
-        'PYTHONPATH': PROJECT_ROOT
-      },
-      error_file: path.join(PROJECT_ROOT, 'logs', 'social-media-scheduler-error.log'),
-      out_file: path.join(PROJECT_ROOT, 'logs', 'social-media-scheduler-out.log'),
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    }
+    // TODO: Create scripts/social_media_scheduler.py if needed
   ]
 };
