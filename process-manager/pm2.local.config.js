@@ -296,7 +296,7 @@ module.exports = {
     {
       name: 'daily-review',
       script: path.join(PROJECT_ROOT, '.claude', 'skills', 'daily-review', 'invoke.py'),
-      args: '--vault ' + VAULT_PATH,
+      args: '"generate daily plan"',
       interpreter: 'python',
       cwd: PROJECT_ROOT,
       instances: 1,
@@ -317,7 +317,7 @@ module.exports = {
     {
       name: 'monday-ceo-briefing',
       script: path.join(PROJECT_ROOT, '.claude', 'skills', 'weekly-briefing', 'invoke.py'),
-      args: '--vault ' + VAULT_PATH,
+      args: '"generate ceo briefing"',
       interpreter: 'python',
       cwd: PROJECT_ROOT,
       instances: 1,

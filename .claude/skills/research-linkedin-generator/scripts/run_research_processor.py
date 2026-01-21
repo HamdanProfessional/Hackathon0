@@ -47,10 +47,20 @@ def main():
     print(f"Time: {os.popen('date /t && time /t').read().strip()}")
     print()
 
-    generator = ResearchLinkedInGenerator(args.vault)
+    # Check if GLM_API_KEY is set
+    if not os.getenv("GLM_API_KEY"):
+        print("[WARNING] GLM_API_KEY environment variable not set")
+        print("[INFO] Research processor requires GLM API key to generate posts")
+        print("[INFO] Skipping research processing (will retry at next scheduled run)")
+        print("\n" + "=" * 60)
+        print("Research processor skipped (missing API key)")
+        print("=" * 60)
+        return 0
 
-    # Process daily research topics
     try:
+        generator = ResearchLinkedInGenerator(args.vault)
+
+        # Process daily research topics
         generator.process_daily_research()
         print("\n" + "=" * 60)
         print("Research processor completed successfully")
