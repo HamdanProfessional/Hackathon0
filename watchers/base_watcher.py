@@ -35,6 +35,8 @@ class BaseWatcher(ABC):
     Watchers continuously monitor external sources (Gmail, Calendar, etc.)
     and create markdown action files in the vault's Needs_Action folder
     when new items are detected.
+
+    Includes circuit breaker pattern for handling persistent failures.
     """
 
     def __init__(
@@ -42,6 +44,8 @@ class BaseWatcher(ABC):
         vault_path: str,
         check_interval: int = 60,
         dry_run: bool = False,
+        max_consecutive_failures: int = 5,
+        circuit_breaker_backoff: int = 300,
     ):
         """
         Initialize the watcher.
@@ -50,12 +54,22 @@ class BaseWatcher(ABC):
             vault_path: Path to the Obsidian vault
             check_interval: Seconds between checks (default: 60)
             dry_run: If True, log actions but don't create files
+            max_consecutive_failures: Max consecutive errors before triggering circuit breaker (default: 5)
+            circuit_breaker_backoff: Base backoff time in seconds when circuit breaker triggers (default: 300)
         """
         self.vault_path = Path(vault_path)
         self.needs_action = self.vault_path / "Needs_Action"
         self.logs_path = self.vault_path / "Logs"
         self.check_interval = check_interval
         self.dry_run = dry_run
+        self.max_consecutive_failures = max_consecutive_failures
+        self.circuit_breaker_backoff = circuit_breaker_backoff
+
+        # Circuit breaker state
+        self.consecutive_failures = 0
+        self.last_success_time = time.time()
+        self.circuit_breaker_active = False
+
         self.logger = setup_logging(self.__class__.__name__)
         self._ensure_folders()
 
@@ -143,7 +157,7 @@ class BaseWatcher(ABC):
 
     def run(self, duration: Optional[int] = None) -> None:
         """
-        Run the watcher loop.
+        Run the watcher loop with circuit breaker pattern.
 
         Args:
             duration: Run for this many seconds, or None to run forever
@@ -159,8 +173,28 @@ class BaseWatcher(ABC):
         try:
             while True:
                 try:
+                    # Check if circuit breaker is active
+                    if self.circuit_breaker_active:
+                        backoff_time = min(
+                            self.circuit_breaker_backoff * (2 ** min(self.consecutive_failures - self.max_consecutive_failures, 5)),
+                            3600  # Max 1 hour backoff
+                        )
+                        self.logger.warning(
+                            f"Circuit breaker active. Backing off for {backoff_time}s "
+                            f"(failures: {self.consecutive_failures})"
+                        )
+                        time.sleep(backoff_time)
+
+                        # Try to recover
+                        self.logger.info("Attempting to recover from circuit breaker...")
+                        self.circuit_breaker_active = False
+
                     # Check for updates
                     items = self.check_for_updates()
+
+                    # Success! Reset failure counter
+                    self.consecutive_failures = 0
+                    self.last_success_time = time.time()
 
                     # Filter out already processed items
                     new_items = [
@@ -181,10 +215,32 @@ class BaseWatcher(ABC):
                         break
 
                 except Exception as e:
-                    self.logger.error(f"Error in watcher loop: {e}")
-                    self.log_action("error", {"error": str(e)})
+                    self.consecutive_failures += 1
+                    self.logger.error(
+                        f"Error in watcher loop (failure #{self.consecutive_failures}): {e}"
+                    )
+                    self.log_action("error", {
+                        "error": str(e),
+                        "consecutive_failures": self.consecutive_failures
+                    })
 
-                time.sleep(self.check_interval)
+                    # Check if we should trigger circuit breaker
+                    if self.consecutive_failures >= self.max_consecutive_failures:
+                        self.circuit_breaker_active = True
+                        self.logger.error(
+                            f"Circuit breaker triggered after {self.consecutive_failures} consecutive failures"
+                        )
+
+                    # Apply exponential backoff for failures
+                    if self.consecutive_failures > 3:
+                        backoff_seconds = min(
+                            self.check_interval * (2 ** (self.consecutive_failures - 3)),
+                            self.circuit_breaker_backoff
+                        )
+                        self.logger.warning(f"Backing off for {backoff_seconds}s due to repeated failures")
+                        time.sleep(backoff_seconds)
+                    else:
+                        time.sleep(self.check_interval)
 
         except KeyboardInterrupt:
             self.logger.info("Watcher stopped by user")

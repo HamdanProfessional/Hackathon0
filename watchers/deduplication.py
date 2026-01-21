@@ -44,7 +44,8 @@ class Deduplication:
         vault_path: str,
         state_file: str,
         item_prefix: str = "ITEM",
-        scan_folders: bool = True
+        scan_folders: bool = False,
+        max_processed_items: int = 10000
     ):
         """
         Initialize deduplication system.
@@ -53,12 +54,14 @@ class Deduplication:
             vault_path: Path to the Obsidian vault
             state_file: Name of state file (e.g., ".gmail_state.json")
             item_prefix: Prefix for item IDs (e.g., "EMAIL", "EVENT")
-            scan_folders: If True, scan existing files on first run
+            scan_folders: If True, scan existing files on first run (default: False for performance)
+            max_processed_items: Maximum number of items to keep in memory (LRU eviction)
         """
         self.vault_path = Path(vault_path)
         self.state_file = self.vault_path / state_file
         self.item_prefix = item_prefix
         self.scan_folders = scan_folders
+        self.max_processed_items = max_processed_items
 
         self.processed_items: Set[str] = set()
 
@@ -180,12 +183,23 @@ class Deduplication:
         """
         Mark an item as processed and optionally save state.
 
+        Implements LRU eviction when max_processed_items is reached.
+
         Args:
             item_id: The ID to mark (without prefix)
             save: Whether to save state immediately (default: True)
         """
         full_id = f"{self.item_prefix}_{item_id}"
         self.processed_items.add(full_id)
+
+        # Enforce size limit with LRU eviction (remove oldest 10% if at limit)
+        if len(self.processed_items) > self.max_processed_items:
+            # Convert to list to remove oldest items (first items in set are oldest)
+            items_list = list(self.processed_items)
+            items_to_remove = len(items_list) // 10  # Remove 10%
+            for old_item in items_list[:items_to_remove]:
+                self.processed_items.discard(old_item)
+            logger.debug(f"LRU eviction: removed {items_to_remove} old items (max: {self.max_processed_items})")
 
         if save:
             self._save_state()

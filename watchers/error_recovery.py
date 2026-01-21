@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 class ErrorCategory(Enum):
     """Classification of error types for appropriate handling."""
     TRANSIENT = "transient"
+    RATE_LIMIT = "rate_limit"  # API rate limiting (separate category for longer backoff)
     AUTHENTICATION = "authentication"
     LOGIC = "logic"
     DATA = "data"
@@ -44,6 +45,12 @@ class ErrorConfig:
             "max_attempts": 3,
             "base_delay": 1,
             "max_delay": 60
+        },
+
+        ErrorCategory.RATE_LIMIT: {
+            "max_attempts": 5,
+            "base_delay": 60,  # Start with 1 minute
+            "max_delay": 600  # Up to 10 minutes for severe rate limits
         },
 
         ErrorCategory.AUTHENTICATION: {
@@ -88,9 +95,9 @@ class ErrorConfig:
         if any(kw in error_str for kw in ["unauthorized", "403", "401", "invalid credentials", "invalid token"]):
             return (ErrorCategory.AUTHENTICATION, True)
 
-        # Rate limiting
-        if any(kw in error_str for kw in ["rate limit", "429", "quota exceeded", "too many requests"]):
-            return (ErrorCategory.TRANSIENT, True)
+        # Rate limiting (separate category for longer backoff)
+        if any(kw in error_str for kw in ["rate limit", "429", "quota exceeded", "too many requests", "throttle"]):
+            return (ErrorCategory.RATE_LIMIT, True)
 
         # Data errors
         if any(kw in error_str for kw in ["not found", "no such", "invalid data", "parse error"]):
