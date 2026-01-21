@@ -254,10 +254,10 @@ Respond with ONLY ONE WORD: approve, reject, or manual
 
     def _fallback_decision(self, frontmatter: Dict, content: str, filepath: Path) -> str:
         """Fallback rule-based decision if AI is unavailable."""
-        action_type = frontmatter.get("type", "")
-        service = frontmatter.get("service", "")
-        priority = frontmatter.get("priority", "normal")
-        subject = frontmatter.get("subject", "").lower()
+        action_type = frontmatter.get("type", "") or ""
+        service = frontmatter.get("service", "") or ""
+        priority = frontmatter.get("priority", "normal") or "normal"
+        subject = (frontmatter.get("subject") or "").lower()
 
         # Handle None content
         content_lower = content.lower() if content else ""
