@@ -176,6 +176,37 @@ module.exports = {
       error_file: path.join(PROJECT_ROOT, 'logs', 'health-monitor-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'health-monitor-out.log'),
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+
+    // ============================================================
+    // RESEARCH LINKEDIN GENERATOR (Daily 9 AM)
+    // ============================================================
+
+    {
+      name: 'research-processor',
+      script: path.join(PROJECT_ROOT, '.claude', 'skills', 'research-linkedin-generator', 'scripts', 'research.py'),
+      args: '--vault ' + VAULT_PATH + ' --daily',
+      interpreter: path.join(PROJECT_ROOT, 'venv', 'bin', 'python'),
+      cwd: PROJECT_ROOT,
+      instances: 1,
+      autorestart: false,
+      watch: false,
+      max_restarts: 3,
+      max_memory_restart: '500M',
+      cron_restart: '0 9 * * *',
+      env: {
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT,
+        'GLM_API_KEY': 'c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM',
+        'GLM_API_URL': 'https://api.z.ai/api/coding/paas/v4',
+        'USE_CDP': 'false',
+        'HEADLESS': 'true',
+        'CLOUD_MODE': 'true'
+      },
+      error_file: path.join(PROJECT_ROOT, 'logs', 'research-processor-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'research-processor-out.log'),
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
   ]
 };

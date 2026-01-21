@@ -109,7 +109,8 @@ module.exports = {
       max_memory_restart: "500M",
       env: {
         "PYTHONUNBUFFERED": "1",
-        "PYTHONIOENCODING": "utf-8"
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONPATH": PROJECT_ROOT
       }
     },
 
@@ -311,6 +312,27 @@ module.exports = {
       env: {
         "PYTHONUNBUFFERED": "1",
         "PYTHONIOENCODING": "utf-8"
+      }
+    },
+
+    {
+      name: "research-processor",
+      script: path.join(PROJECT_ROOT, ".claude", "skills", "research-linkedin-generator", "scripts", "research.py"),
+      args: "--vault " + VAULT_PATH + " --daily",
+      interpreter: "python",
+      exec_mode: "fork",
+      autorestart: false,
+      watch: false,
+      max_restarts: 3,
+      cron_schedule: "0 9 * * *",  // 9 AM daily
+      env: {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONPATH": PROJECT_ROOT,
+        "GLM_API_KEY": process.env.GLM_API_KEY || "c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM",
+        "GLM_API_URL": process.env.GLM_API_URL || "https://api.z.ai/api/coding/paas/v4",
+        "USE_CDP": "false",  // Use headless mode for cloud VM
+        "HEADLESS": "true"
       }
     },
 

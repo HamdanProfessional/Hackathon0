@@ -1,0 +1,19 @@
+[Unit]
+Description=AI Research LinkedIn Generator - Daily
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/AI_EMPLOYEE_APP
+Environment="PYTHONPATH=/home/ubuntu/AI_EMPLOYEE_APP"
+Environment="GLM_API_KEY=c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM"
+Environment="GLM_API_URL=https://api.z.ai/api/coding/paas/v4"
+Environment="USE_CDP=false"
+Environment="HEADLESS=true"
+ExecStart=/usr/bin/python3 .claude/skills/research-linkedin-generator/scripts/research.py --daily
+StandardOutput=append:/home/ubuntu/AI_EMPLOYEE_APP/logs/research-service.log
+StandardError=append:/home/ubuntu/AI_EMPLOYEE_APP/logs/research-service.log
+
+[Install]
+WantedBy=multi-user.target

@@ -29,7 +29,7 @@ except ImportError:
     sys.exit(1)
 
 from watchers.base_watcher import BaseWatcher
-from .error_recovery import with_retry, ErrorCategory
+from watchers.error_recovery import with_retry, ErrorCategory
 
 logging.basicConfig(
     level=logging.INFO,
