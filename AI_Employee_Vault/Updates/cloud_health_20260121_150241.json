@@ -1,0 +1,107 @@
+{
+  "timestamp": "2026-01-21T15:02:38.830997",
+  "hostname": "hackathon0-1vcpu-1gb",
+  "system": {
+    "uptime": "3 days, 21:27:27.831022",
+    "cpu_count": 1,
+    "cpu_percent": 100.0
+  },
+  "memory": {
+    "total_gb": 1.9218788146972656,
+    "available_gb": 0.28717041015625,
+    "percent": 85.1,
+    "used_gb": 1.6347084045410156
+  },
+  "disk": {
+    "total_gb": 23.17425537109375,
+    "used_gb": 5.351844787597656,
+    "free_gb": 17.806785583496094,
+    "percent": 23.1
+  },
+  "network": {
+    "connections": 10,
+    "interfaces": {
+      "lo": {
+        "bytes_sent": 20416375,
+        "bytes_recv": 20416375,
+        "packets_sent": 205669,
+        "packets_recv": 205669
+      },
+      "eth0": {
+        "bytes_sent": 318232363,
+        "bytes_recv": 844064621,
+        "packets_sent": 1342444,
+        "packets_recv": 1435347
+      },
+      "eth1": {
+        "bytes_sent": 785328,
+        "bytes_recv": 7286,
+        "packets_sent": 18624,
+        "packets_recv": 103
+      }
+    }
+  },
+  "processes": {
+    "gmail-watcher": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 0.0,
+      "uptime": 1769007758664,
+      "restarts": 67556,
+      "pid": 715361
+    },
+    "calendar-watcher": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 10.0,
+      "uptime": 1769007760873,
+      "restarts": 67554,
+      "pid": 715372
+    },
+    "slack-watcher": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 25.078125,
+      "uptime": 1769007760234,
+      "restarts": 184270,
+      "pid": 715371
+    },
+    "odoo-watcher": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 21.0,
+      "uptime": 1768855224700,
+      "restarts": 1,
+      "pid": 305632
+    },
+    "git-sync-push": {
+      "status": "stopped",
+      "cpu": 0,
+      "memory_mb": 0.0,
+      "uptime": 1769007600003,
+      "restarts": 0,
+      "pid": 0
+    },
+    "cloud-health-monitor": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 16.0,
+      "uptime": 1768893756727,
+      "restarts": 30,
+      "pid": 406903
+    },
+    "auto-approver": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 28.6015625,
+      "uptime": 1768858015732,
+      "restarts": 10,
+      "pid": 317853
+    }
+  },
+  "alerts": [
+    "HIGH CPU: 100.0%",
+    "HIGH MEMORY: 85.1%",
+    "PROCESS STOPPED: git-sync-push"
+  ]
+}
