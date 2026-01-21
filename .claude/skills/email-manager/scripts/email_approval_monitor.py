@@ -39,7 +39,9 @@ try:
     from watchers.base_watcher import BaseWatcher
 except ImportError:
     # Fallback for direct script execution
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    script_dir = Path(__file__).parent
+    watchers_dir = script_dir.parent.parent.parent.parent / "watchers"
+    sys.path.insert(0, str(watchers_dir))
     from base_watcher import BaseWatcher
 
 class EmailApprovalMonitor(BaseWatcher):
@@ -250,6 +252,7 @@ class EmailApprovalMonitor(BaseWatcher):
 
         Handles emails with smart quotes and special characters.
         Also handles draft_content from AI-generated drafts.
+        Falls back to regex parsing if YAML fails.
         """
         details = {}
 
@@ -261,7 +264,7 @@ class EmailApprovalMonitor(BaseWatcher):
                 yaml_content = match.group(1)
 
                 # Remove smart quotes
-                yaml_content = yaml_content.replace('“', '').replace('”', '').replace('‘', '').replace('’', '')
+                yaml_content = yaml_content.replace('""', '').replace('""', '').replace(''', '').replace(''', '')
 
                 # Parse YAML
                 data = yaml.safe_load(yaml_content)
@@ -296,6 +299,46 @@ class EmailApprovalMonitor(BaseWatcher):
                     return details if details.get('to') and details.get('subject') else None
         except Exception as e:
             print(f"[DEBUG] YAML parsing failed: {e}")
+
+        # Fallback: Use regex-based parsing for problematic YAML
+        print("[INFO] Using fallback regex parsing for email details...")
+        try:
+            # Extract key-value pairs using regex
+            yaml_part = content[content.find('---')+3:content.find('---', 3)]
+
+            # Extract common fields using regex
+            patterns = {
+                'to': r'to:\s*(.+?)(?:\n|$)',
+                'from': r'from:\s*(.+?)(?:\n|$)',
+                'subject': r'subject:\s*(.+?)(?:\n|$)',
+                'message_id': r'message_id:\s*(.+?)(?:\n|$)',
+                'thread_id': r'thread_id:\s*(.+?)(?:\n|$)',
+                'status': r'status:\s*(.+?)(?:\n|$)',
+                'draft_content': r'draft_content:\s*(.+?)(?:\n---|\Z)',
+            }
+
+            for key, pattern in patterns.items():
+                match = re.search(pattern, yaml_part, re.MULTILINE | re.DOTALL)
+                if match:
+                    value = match.group(1).strip()
+                    # Remove quotes if present
+                    value = value.strip('"\'').strip()
+                    # Clean up trailing whitespace
+                    value = value.rstrip()
+                    details[key] = value
+
+            # Extract body from email content if not in frontmatter
+            if not details.get('draft_content'):
+                body_match = re.search(r'^# Email:.*?\n\n(.*)', content, re.MULTILINE | re.DOTALL)
+                if body_match:
+                    details['body'] = body_match.group(1).strip()
+                    details['has_draft'] = False
+                else:
+                    details['has_draft'] = True if 'draft_content' in details else False
+
+            return details if details.get('to') and details.get('subject') else None
+        except Exception as e:
+            print(f"[ERROR] Regex parsing also failed: {e}")
 
         return None
 
