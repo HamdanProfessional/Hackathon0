@@ -292,6 +292,7 @@ Respond with ONLY ONE WORD: approve, reject, or manual
     def process_needs_action(self) -> Dict[str, int]:
         """
         Process all items in Needs_Action/ and Inbox/ using AI decisions.
+        Processes multiple files in parallel for faster processing.
 
         Returns:
             Dictionary with counts of processed items
@@ -307,7 +308,14 @@ Respond with ONLY ONE WORD: approve, reject, or manual
         # Process both Needs_Action and Inbox
         files = list(self.needs_action.glob("*.md")) + list((self.vault_path / "Inbox").glob("*.md"))
 
-        for filepath in files:
+        if not files:
+            return results
+
+        # Process files in parallel using ThreadPoolExecutor
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        def process_single_file(filepath):
+            """Process a single file and return result status."""
             try:
                 # Read file content
                 content = filepath.read_text(encoding='utf-8')
@@ -322,39 +330,47 @@ Respond with ONLY ONE WORD: approve, reject, or manual
 
                     if decision == "approve":
                         self._auto_approve(filepath, frontmatter)
-                        results["auto_approved"] += 1
-                        print(f"[AUTO-APPROVE] {filepath.name}")
+                        return ("auto_approved", filepath.name)
 
                     elif decision == "reject":
                         # Move to Rejected
                         dest = self.rejected / filepath.name
                         shutil.move(str(filepath), str(dest))
-                        results["rejected"] += 1
-                        print(f"[REJECTED] {filepath.name} - unsafe action")
+                        return ("rejected", filepath.name)
 
                     elif decision == "draft":
                         # Generate draft and move to Pending_Approval/
                         if draft_content:
                             self._create_draft_with_content(filepath, frontmatter, draft_content)
-                            results["drafted"] += 1
-                            print(f"[AI-DRAFT] {filepath.name} - AI-generated draft created")
+                            return ("drafted", filepath.name)
                         else:
                             # Fallback to manual review if draft generation failed
                             dest = self.pending_approval / filepath.name
                             shutil.move(str(filepath), str(dest))
-                            results["requires_approval"] += 1
-                            print(f"[MANUAL REVIEW] {filepath.name} - draft generation failed")
+                            return ("requires_approval", filepath.name)
 
                     else:  # manual
                         # Requires manual approval - move to Pending_Approval
                         dest = self.pending_approval / filepath.name
                         shutil.move(str(filepath), str(dest))
-                        results["requires_approval"] += 1
-                        print(f"[MANUAL REVIEW] {filepath.name}")
+                        return ("requires_approval", filepath.name)
+
+                else:
+                    # Skip already processed files
+                    return ("skipped", filepath.name)
 
             except Exception as e:
                 print(f"[ERROR] Failed to process {filepath.name}: {e}")
-                results["errors"] += 1
+                return ("error", filepath.name)
+
+        # Process up to 5 files in parallel
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(process_single_file, f): f for f in files}
+
+            for future in as_completed(futures):
+                result_type, filename = future.result()
+                if result_type in results:
+                    results[result_type] += 1
 
         return results
 
@@ -501,9 +517,9 @@ def main():
     try:
         while True:
             results = run_once()
-            # Wait 2 minutes before next check
-            print("[*] Waiting 2 minutes until next check...\n")
-            time.sleep(120)
+            # Quick check interval - process files as soon as they arrive
+            print("[*] Waiting 10 seconds until next check...\n")
+            time.sleep(10)
     except KeyboardInterrupt:
         print("\n[INFO] Auto-approver stopped")
         return 0
