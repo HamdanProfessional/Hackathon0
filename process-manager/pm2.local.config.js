@@ -357,8 +357,53 @@ module.exports = {
     },
 
     // ============================================================
-    // SOCIAL MEDIA SCHEDULER - Disabled (script does not exist)
+    // RESEARCH PROCESSOR (Daily LinkedIn Research Posts)
     // ============================================================
-    // TODO: Create scripts/social_media_scheduler.py if needed
+
+    {
+      name: 'research-processor',
+      script: path.join(PROJECT_ROOT, '.claude', 'skills', 'research-linkedin-generator', 'scripts', 'run_research_processor.py'),
+      interpreter: 'python',
+      args: '--vault ' + VAULT_PATH,
+      cwd: PROJECT_ROOT,
+      instances: 1,
+      autorestart: false,
+      watch: false,
+      max_memory_restart: '500M',
+      cron_restart: '0 9 * * 1-5',  // 9 AM weekdays
+      env: {
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
+      },
+      error_file: path.join(PROJECT_ROOT, 'logs', 'research-processor-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'research-processor-out.log'),
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    },
+
+    // ============================================================
+    // SOCIAL MEDIA SCHEDULER
+    // ============================================================
+
+    {
+      name: 'social-media-scheduler',
+      script: path.join(PROJECT_ROOT, 'scripts', 'social_media_scheduler.py'),
+      args: '--vault ' + VAULT_PATH,
+      interpreter: 'python',
+      cwd: PROJECT_ROOT,
+      instances: 1,
+      autorestart: false,
+      watch: false,
+      max_memory_restart: '300M',
+      cron_restart: '0 8,12,16 * * 1-5',  // 8 AM, 12 PM, 4 PM weekdays
+      env: {
+        'PYTHONUNBUFFERED': '1',
+        'PYTHONIOENCODING': 'utf-8',
+        'PYTHONPATH': PROJECT_ROOT
+      },
+      error_file: path.join(PROJECT_ROOT, 'logs', 'social-media-scheduler-error.log'),
+      out_file: path.join(PROJECT_ROOT, 'logs', 'social-media-scheduler-out.log'),
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    }
   ]
 };
