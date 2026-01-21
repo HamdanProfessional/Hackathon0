@@ -135,7 +135,7 @@ From: {frontmatter.get('from', 'unknown')}
 Subject: {frontmatter.get('subject', 'N/A')}
 
 # CONTENT
-{content[:2000]}
+{content[:2000] if content else '(No content)'}
 
 # YOUR TASK
 This is an email reply or social media post request. Your job is to:
@@ -173,7 +173,7 @@ From: {frontmatter.get('from', 'unknown')}
 Subject: {frontmatter.get('subject', 'N/A')}
 
 # CONTENT
-{content[:2000]}
+{content[:2000] if content else '(No content)'}
 
 # YOUR TASK
 Decide: approve, reject, or manual
