@@ -164,6 +164,23 @@ class LinkedInApprovalMonitor:
         if match:
             return match.group(1).strip()
 
+        # Look for ## LinkedIn Post section (for research-generated posts)
+        linkedin_post_match = re.search(r'## LinkedIn Post\s*\n+(.+?)(?=\n##|\n#|$)', content, re.DOTALL)
+        if linkedin_post_match:
+            post_text = linkedin_post_match.group(1).strip()
+            # Remove the title line if present (e.g., "# LinkedIn Post: topic")
+            post_text = re.sub(r'^# LinkedIn Post:.+\n?', '', post_text)
+            # Clean up any trailing metadata
+            # Remove everything after first hashtag line (sources section usually follows)
+            lines = post_text.split('\n')
+            content_lines = []
+            for line in lines:
+                # Stop at sources section
+                if line.startswith('## Sources') or line.startswith('## Sources:'):
+                    break
+                content_lines.append(line)
+            return '\n'.join(content_lines).strip()
+
         # If no code blocks, look for content after the frontmatter
         # Split by "---" to get the content section after frontmatter
         parts = content.split('---')
@@ -172,13 +189,13 @@ class LinkedInApprovalMonitor:
             content_section = '---'.join(parts[2:]).strip()
 
             # Remove metadata sections by stopping at certain headers
-            # Stop at: ## Metadata, ## Approval Required, ## To Reject, ---
+            # Stop at: ## Metadata, ## Approval Required, ## To Reject, ## Sources, ---
             lines = content_section.split('\n')
             content_lines = []
 
             for line in lines:
                 # Stop at metadata sections
-                if line.startswith('## Metadata') or line.startswith('## Approval Required') or line.startswith('## To Reject'):
+                if line.startswith('## Metadata') or line.startswith('## Approval Required') or line.startswith('## To Reject') or line.startswith('## Sources'):
                     break
                 # Stop at another frontmatter
                 if line.strip() == '---':
