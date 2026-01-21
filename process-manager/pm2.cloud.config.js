@@ -124,8 +124,8 @@ module.exports = {
       max_restarts: 10,
       max_memory_restart: '500M',
       env: {
-        'ANTHROPIC_API_KEY': 'c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM',
-        'ANTHROPIC_BASE_URL': 'https://api.z.ai/api/coding/paas/v4',
+        'ANTHROPIC_API_KEY': process.env.ANTHROPIC_API_KEY || '',
+        'ANTHROPIC_BASE_URL': process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com',
         'PYTHONPATH': PROJECT_ROOT,
         'PYTHONUNBUFFERED': '1',
         'PYTHONIOENCODING': 'utf-8',
@@ -201,8 +201,8 @@ module.exports = {
         'PYTHONUNBUFFERED': '1',
         'PYTHONIOENCODING': 'utf-8',
         'PYTHONPATH': PROJECT_ROOT,
-        'GLM_API_KEY': 'c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM',
-        'GLM_API_URL': 'https://api.z.ai/api/coding/paas/v4',
+        'GLM_API_KEY': process.env.GLM_API_KEY || '',
+        'GLM_API_URL': process.env.GLM_API_URL || 'https://api.z.ai/api/coding/paas/v4',
         'USE_CDP': 'false',
         'HEADLESS': 'true',
         'CLOUD_MODE': 'true'

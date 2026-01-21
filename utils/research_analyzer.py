@@ -29,8 +29,11 @@ class ResearchAnalyzer:
         Args:
             api_key: GLM API key (defaults to GLM_API_KEY env var)
             api_url: GLM API URL (defaults to https://api.z.ai/api/coding/paas/v4)
+
+        Raises:
+            ValueError: If GLM_API_KEY is not set
         """
-        self.api_key = api_key or os.getenv("GLM_API_KEY") or "c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM"
+        self.api_key = api_key or os.getenv("GLM_API_KEY")
         self.api_url = api_url or os.getenv("GLM_API_URL", "https://api.z.ai/api/coding/paas/v4")
 
         if not self.api_key:

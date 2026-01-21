@@ -107,7 +107,7 @@ class GmailWatcher(BaseWatcher):
                 creds = flow.run_local_server(port=0)
 
             # Save credentials for next run
-            with open(self.token_path, "w") as token:
+            with open(self.token_path, "w", encoding="utf-8") as token:
                 token.write(creds.to_json())
 
         self.service = build("gmail", "v1", credentials=creds)
