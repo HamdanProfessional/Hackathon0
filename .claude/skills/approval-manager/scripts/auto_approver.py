@@ -258,7 +258,9 @@ Respond with ONLY ONE WORD: approve, reject, or manual
         service = frontmatter.get("service", "")
         priority = frontmatter.get("priority", "normal")
         subject = frontmatter.get("subject", "").lower()
-        content_lower = content.lower()
+
+        # Handle None content
+        content_lower = content.lower() if content else ""
 
         # REJECT: Payments and scams
         if any(word in subject or word in content_lower for word in ["invoice", "payment", "urgent", "wire transfer", "bitcoin"]):
