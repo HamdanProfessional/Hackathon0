@@ -69,11 +69,19 @@ if [ -d "AI_EMPLOYEE_APP" ]; then
     rm -rf AI_EMPLOYEE_APP
 fi
 
-# TODO: Update this URL with your actual repository
-# For now, we'll create a placeholder structure
-echo "⚠️  SKIPPED: Please clone your repository manually"
-echo "   Run: git clone https://github.com/your-username/AI_EMPLOYEE_APP.git"
-echo ""
+# STEP: Clone your repository
+# IMPORTANT: Update REPO_URL below with your actual repository URL before running this script
+# If you don't have a repository yet, you can initialize one locally or skip this step.
+REPO_URL="${REPO_URL:-}"
+if [ -z "$REPO_URL" ]; then
+    echo "⚠️  REPO_URL not set - skipping repository clone"
+    echo "   To set your repository, run: export REPO_URL='git@github.com:username/AI_EMPLOYEE_APP.git'"
+    echo "   Then re-run this script, or clone manually after setup completes"
+    echo ""
+else
+    echo "📥 Cloning repository from $REPO_URL"
+    git clone "$REPO_URL" AI_EMPLOYEE_APP
+fi
 
 # Create placeholder directory structure for now
 mkdir -p AI_EMPLOYEE_APP/AI_Employee_Vault

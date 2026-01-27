@@ -125,14 +125,14 @@ AI_Employee_Vault/Needs_Action/EVENT_*.md
 
 ## Revenue
 ### This Week
-- Total revenue: $X,XXX
-- Invoices sent: X
-- Invoices paid: X
+- Total revenue: [AUTO-GENERATED from actual data]
+- Invoices sent: [AUTO-GENERATED]
+- Invoices paid: [AUTO-GENERATED]
 
 ### Month to Date
-- MTD Revenue: $X,XXX
-- Monthly Goal: $X,XXX
-- Progress: XX%
+- MTD Revenue: [AUTO-GENERATED from actual data]
+- Monthly Goal: [FROM Business_Goals.md]
+- Progress: [AUTO-CALCULATED percentage]
 
 ## Completed Tasks
 ### Business

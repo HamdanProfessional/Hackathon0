@@ -8,6 +8,7 @@ the required methods: check_for_updates() and create_action_file().
 import time
 import json
 import logging
+import re
 from pathlib import Path
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -149,7 +150,6 @@ class BaseWatcher(ABC):
         # Convert class name to agent ID (e.g., GmailWatcher -> gmail-watcher)
         class_name = self.__class__.__name__
         # Insert hyphens before capital letters (except first)
-        import re
         agent_id = re.sub(r'(?<!^)(?=[A-Z])', '-', class_name).lower()
         return agent_id
 
@@ -355,7 +355,9 @@ class BaseWatcher(ABC):
         """Cleanup on deletion."""
         try:
             self._shutdown_a2a()
-        except Exception:
+        except Exception as e:
+            # Silently log cleanup failures during garbage collection
+            # Logger may not be available at this point
             pass
 
     @abstractmethod

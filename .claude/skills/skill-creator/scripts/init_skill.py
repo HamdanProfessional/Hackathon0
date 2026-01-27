@@ -17,14 +17,14 @@ from pathlib import Path
 
 SKILL_TEMPLATE = """---
 name: {skill_name}
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: A Claude Code skill for {skill_name}. Edit this description to explain what the skill does and when to use it.
 ---
 
 # {skill_title}
 
 ## Overview
 
-[TODO: 1-2 sentences explaining what this skill enables]
+This skill provides capabilities for {skill_name}. Edit this section to describe what the skill enables and when to use it.
 
 ## Structuring This Skill
 

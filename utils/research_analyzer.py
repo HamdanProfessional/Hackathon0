@@ -13,9 +13,11 @@ Usage:
     post = analyzer.generate_linkedin_post("AI in manufacturing", analysis)
 """
 
+from __future__ import annotations
+
 import json
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import requests
 
 
@@ -97,7 +99,9 @@ Return ONLY valid JSON, no markdown formatting."""
 
         except json.JSONDecodeError as e:
             print(f"[ERROR] Failed to parse GLM JSON response: {e}")
-            print(f"[DEBUG] Response was: {response[:500]}...")
+            # Response preview for debugging (only show first 500 chars)
+            if len(response) > 500:
+                print(f"[ERROR] Response preview: {response[:500]}...")
             # Return fallback analysis
             return self._fallback_analysis(articles)
 

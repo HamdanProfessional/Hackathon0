@@ -590,29 +590,12 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
                     # Try multiple message selectors
                     chat_messages = page.query_selector_all('[data-testid="msg-container"], [data-testid="msg"], div[class*="message"]')
 
-                    # DEBUG: Check if we're actually in a chat
-                    chat_content = page.evaluate("""() => {
-                        const main = document.querySelector('#main');
-                        if (!main) return 'No main element';
-
-                        const messages = main.querySelectorAll('[data-testid="msg-container"], [data-testid="msg"]');
-                        const text = main.innerText || '';
-                        return {
-                            mainExists: true,
-                            msgContainers: messages.length,
-                            innerText: text.substring ? text.substring(0, 200) : 'No text'
-                        };
-                    }""")
-                    logger.info(f"DEBUG - Chat content: {chat_content}")
-                    logger.info(f"Found {len(chat_messages)} messages with [data-testid='msg-container']")
+                    logger.debug(f"Found {len(chat_messages)} messages with [data-testid='msg-container']")
 
                     # Check last 3 messages
                     for msg_idx, msg in enumerate(chat_messages[-3:]):
                         try:
                             msg_text = msg.inner_text()
-
-                            # DEBUG: Log what we're seeing
-                            logger.info(f"Chat {i} - Message {msg_idx} from {sender}: {msg_text[:100]}...")
 
                             if self._is_important(msg_text):
                                 # Use stable ID based on content

@@ -373,14 +373,44 @@ class OdooClient:
         Get account balance.
 
         Args:
-            account_code: Account code filter
+            account_code: Account code filter (e.g., '1100' for Cash)
 
         Returns:
             Account balance
         """
-        # TODO: Implement proper account balance query
-        # This requires knowing the account structure
-        return 0.0
+        try:
+            # Search for account by code
+            domain = [('code', '=', account_code)] if account_code else []
+            accounts = self.execute('account.account', 'search_read', {
+                'domain': domain,
+                'fields': ['id', 'name', 'code', 'current_balance', 'company_id'],
+                'limit': 1
+            })
+
+            if not accounts:
+                # If no specific account found, try to get a default asset account
+                default_domain = [
+                    ('user_type', '=', 'regular'),
+                    ('company_id', '=', self.company_id)
+                ]
+                accounts = self.execute('account.account', 'search_read', {
+                    'domain': default_domain,
+                    'fields': ['id', 'name', 'code', 'current_balance'],
+                    'order': 'code ASC',
+                    'limit': 1
+                })
+
+            if accounts:
+                balance = accounts[0].get('current_balance', 0.0)
+                self.logger.debug(f"Account balance for {accounts[0]['name']}: {balance}")
+                return float(balance)
+            else:
+                self.logger.warning("No accounts found for balance query")
+                return 0.0
+
+        except Exception as e:
+            self.logger.error(f"Error fetching account balance: {e}")
+            return 0.0
 
     def _format_invoices(self, invoices: List[Dict]) -> List[Dict[str, Any]]:
         """Format invoice data for easier consumption."""

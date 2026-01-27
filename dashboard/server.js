@@ -25,7 +25,10 @@ const MAX_HEALTH_HISTORY = 60; // Keep 60 data points (1 minute per point)
 
 // Determine vault path (handles both direct and PM2 execution)
 let VAULT_PATH;
-if (fs.existsSync(path.join(__dirname, '../AI_Employee_Vault'))) {
+// Check environment variable first (cross-platform)
+if (process.env.VAULT_PATH && fs.existsSync(process.env.VAULT_PATH)) {
+  VAULT_PATH = process.env.VAULT_PATH;
+} else if (fs.existsSync(path.join(__dirname, '../AI_Employee_Vault'))) {
   // Dashboard is in dashboard/, vault is in ../AI_Employee_Vault
   VAULT_PATH = path.join(__dirname, '../AI_Employee_Vault');
 } else if (fs.existsSync(path.join(__dirname, '../../AI_Employee_Vault'))) {
@@ -35,8 +38,8 @@ if (fs.existsSync(path.join(__dirname, '../AI_Employee_Vault'))) {
   // Running from project root
   VAULT_PATH = path.join(process.cwd(), 'AI_Employee_Vault');
 } else {
-  // Hardcoded fallback
-  VAULT_PATH = path.join('C:', 'Users', 'User', 'Desktop', 'AI_EMPLOYEE_APP', 'AI_Employee_Vault');
+  // Fallback to parent directory of dashboard
+  VAULT_PATH = path.join(__dirname, '..', 'AI_Employee_Vault');
 }
 
 console.log('[Dashboard] Vault path:', VAULT_PATH);
@@ -799,45 +802,6 @@ async function getRunningProcessesJSON() {
     });
   });
 }
-
-// API: Get watcher-specific status (uses JSON file)
-app.get('/api/watchers/status', async (req, res) => {
-  try {
-    // Try PM2 first
-    let watchers = [];
-
-    try {
-      const pm2Processes = await pm2List();
-      watchers = pm2Processes.filter(p =>
-        p.name.includes('watcher') ||
-        p.name.includes('monitor')
-      );
-    } catch (e) {
-      console.log('[Watchers] PM2 not available, using JSON tracker');
-    }
-
-    // If PM2 has no watchers, use JSON file
-    if (watchers.length === 0) {
-      watchers = await getRunningProcessesJSON();
-    }
-
-    // Add default status if missing
-    watchers = watchers.map(w => ({
-      name: w.name,
-      status: w.status || 'online',
-      cpu: w.cpu || 0,
-      memory: w.memory || 0,
-      uptime: w.timestamp || new Date().toISOString(),
-      restarts: 0,
-      lastError: null
-    }));
-
-    res.json(watchers);
-  } catch (err) {
-    console.error('[Watchers Status] Error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // API: Update processes (called by process_tracker.py)
 app.post('/api/processes/update', async (req, res) => {

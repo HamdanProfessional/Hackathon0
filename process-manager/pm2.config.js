@@ -77,7 +77,7 @@ module.exports = {
         "PYTHONUNBUFFERED": "1",
         "PYTHONIOENCODING": "utf-8"
         // TODO: Set Odoo credentials via environment variables:
-        // ODOO_URL, ODOO_DB, OODO_USERNAME, ODOO_PASSWORD
+        // ODOO_URL, ODOO_DB, ODOO_USERNAME, ODOO_PASSWORD
       }
     },
 
@@ -348,7 +348,7 @@ module.exports = {
         "PYTHONUNBUFFERED": "1",
         "PYTHONIOENCODING": "utf-8",
         "PYTHONPATH": PROJECT_ROOT,
-        "GLM_API_KEY": process.env.GLM_API_KEY || "c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM",
+        "GLM_API_KEY": process.env.GLM_API_KEY || "",
         "GLM_API_URL": process.env.GLM_API_URL || "https://api.z.ai/api/coding/paas/v4",
         "USE_CDP": "false",  // Use headless mode for cloud VM
         "HEADLESS": "true"

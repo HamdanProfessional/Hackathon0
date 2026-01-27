@@ -147,7 +147,7 @@ class XeroWatcher(BaseWatcher):
                 """Save token to file."""
                 token["tenant_id"] = self.token_data.get("tenant_id", "")
                 token["tenant_name"] = self.token_data.get("tenant_name", "")
-                with open(self.token_path, "w") as f:
+                with open(self.token_path, "w", encoding='utf-8') as f:
                     json.dump(token, f, indent=2)
                 self.token_data = token
 
@@ -570,7 +570,7 @@ def authenticate(credentials_path: str, token_path: str) -> None:
         print(f"Token received, expires: {token.get('expires_at', 'unknown')}")
 
         # Save token
-        with open(token_path, "w") as f:
+        with open(token_path, "w", encoding='utf-8') as f:
             json.dump(token, f, indent=2)
 
         print(f"✅ Token saved to: {token_path}")

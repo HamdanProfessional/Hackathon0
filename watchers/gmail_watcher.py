@@ -339,7 +339,7 @@ created: {datetime.now().isoformat()}
         )
         creds = flow.run_local_server(port=0)
 
-        with open(token_path, "w") as token:
+        with open(token_path, "w", encoding='utf-8') as token:
             token.write(creds.to_json())
 
         print(f"Authentication successful! Token saved to {token_path}")
