@@ -90,7 +90,7 @@ class OdooWatcher(BaseWatcher):
                 "last_check": self.last_check.isoformat() if self.last_check else None,
                 "updated_at": datetime.now().isoformat(),
             }
-            self.state_file.write_text(json.dumps(state, indent=2))
+            self.state_file.write_text(json.dumps(state, indent=2), encoding='utf-8')
         except Exception as e:
             self.logger.warning(f"Could not save state: {e}")
 

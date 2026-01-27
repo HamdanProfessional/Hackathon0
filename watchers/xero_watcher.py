@@ -180,7 +180,7 @@ class XeroWatcher(BaseWatcher):
         )
 
         # Save new token
-        with open(self.token_path, "w") as f:
+        with open(self.token_path, "w", encoding='utf-8') as f:
             json.dump(token, f, indent=2)
 
         return token

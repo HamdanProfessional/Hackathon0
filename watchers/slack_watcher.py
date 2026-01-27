@@ -302,7 +302,7 @@ status: pending
         filepath = self.needs_action / filename
 
         if not self.dry_run:
-            filepath.write_text(content)
+            filepath.write_text(content, encoding='utf-8')
             self.logger.info(f"Created action file: {filepath}")
         else:
             self.logger.info(f"[DRY RUN] Would create: {filepath}")
