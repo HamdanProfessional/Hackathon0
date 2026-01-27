@@ -60,7 +60,14 @@ mkdir -p "${PROJECT_DIR}/logs"
 
 # 5. Setup environment
 echo "[5/8] Setting up environment..."
-export GLM_API_KEY="c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM"
+
+# Require GLM_API_KEY to be set
+if [ -z "$GLM_API_KEY" ]; then
+    echo "Error: GLM_API_KEY environment variable is required but not set"
+    echo "Usage: GLM_API_KEY=your_key bash $0"
+    exit 1
+fi
+
 export GLM_API_URL="https://api.z.ai/api/coding/paas/v4"
 export USE_CDP="false"
 export HEADLESS="true"
@@ -71,11 +78,11 @@ if ! grep -q "GLM_API_KEY" "${HOME}/.bashrc" 2>/dev/null; then
     cat >> "${HOME}/.bashrc" << 'EOF'
 
 # Research LinkedIn Generator
-export GLM_API_KEY="c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM"
+export GLM_API_KEY="\${GLM_API_KEY:-}"
 export GLM_API_URL="https://api.z.ai/api/coding/paas/v4"
 export USE_CDP="false"
 export HEADLESS="true"
-export PYTHONPATH="${HOME}/AI_EMPLOYEE_APP"
+export PYTHONPATH="\${HOME}/AI_EMPLOYEE_APP"
 EOF
     echo "✓ Environment added to .bashrc"
 fi
@@ -96,7 +103,7 @@ Type=oneshot
 User=${USER}
 WorkingDirectory=${PROJECT_DIR}
 Environment="PYTHONPATH=${PROJECT_DIR}"
-Environment="GLM_API_KEY=c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM"
+Environment="GLM_API_KEY=\${GLM_API_KEY}"
 Environment="GLM_API_URL=https://api.z.ai/api/coding/paas/v4"
 Environment="USE_CDP=false"
 Environment="HEADLESS=true"

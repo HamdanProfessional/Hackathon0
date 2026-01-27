@@ -38,11 +38,11 @@ echo "[5/6] Setting up environment..."
 cat >> "${HOME}/.bashrc" << 'EOF'
 
 # Research LinkedIn Generator
-export GLM_API_KEY="c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM"
+export GLM_API_KEY="\${GLM_API_KEY:-}"
 export GLM_API_URL="https://api.z.ai/api/coding/paas/v4"
 export USE_CDP="false"
 export HEADLESS="true"
-export PYTHONPATH="${PROJECT_DIR}"
+export PYTHONPATH="\${PROJECT_DIR:-/root/AI_EMPLOYEE_APP}"
 EOF
 
 source "${HOME}/.bashrc"

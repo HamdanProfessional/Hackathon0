@@ -1,5 +1,11 @@
 @echo off
-set API_KEY=c414057ceccd4e8dae4ae3198f760c7a.BW9M3G4m8ers9woM
+REM Get API key from environment variable (required)
+set "API_KEY=%GLM_API_KEY%"
+if "%API_KEY%"=="" (
+    echo Error: GLM_API_KEY environment variable not set
+    exit /b 1
+)
+
 set BASE_URL=https://api.z.ai/api/coding/paas/v4
 
 echo Creating update script...
