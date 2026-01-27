@@ -30,6 +30,7 @@ except ImportError:
 
 from watchers.base_watcher import BaseWatcher
 from watchers.error_recovery import with_retry, ErrorCategory
+from watchers.deduplication import Deduplication
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,13 +69,14 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
         self.session_path.mkdir(parents=True, exist_ok=True)
 
         self.headless = headless
-        self.processed_messages = set()
 
-        # Path to persistent state file (survives restarts)
-        self.state_file = self.vault_path / '.whatsapp_state.json'
-
-        # Load already processed messages from state file or existing files
-        self._load_processed_messages()
+        # Use standard deduplication module
+        self.dedup = Deduplication(
+            vault_path=vault_path,
+            state_file=".whatsapp_state.json",
+            item_prefix="WHATSAPP_MSG",
+            scan_folders=True
+        )
 
         # Persistent browser context and page
         self.playwright = None
@@ -86,94 +88,8 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
 
         logger.info(f"WhatsApp watcher initialized with Playwright")
         logger.info(f"Session path: {self.session_path}")
-        logger.info(f"State file: {self.state_file}")
         logger.info(f"Headless: {headless}")
-        logger.info(f"Already processed: {len(self.processed_messages)} messages")
-
-    def _load_processed_messages(self):
-        """Load IDs of already processed messages from state file or existing action files."""
-        import hashlib
-
-        # Try loading from persistent state file first (fast and reliable)
-        if self.state_file.exists():
-            try:
-                state_data = json.loads(self.state_file.read_text(encoding='utf-8'))
-                loaded_ids = set(state_data.get('processed_messages', []))
-                self.processed_messages.update(loaded_ids)
-                logger.info(f"Loaded {len(loaded_ids)} processed messages from state file")
-                return
-            except Exception as e:
-                logger.warning(f"Could not load state file: {e}")
-
-        # Fallback: Scan all WhatsApp message files in the vault
-        logger.info("State file not found, scanning existing WhatsApp files...")
-        folders_to_scan = [
-            self.needs_action,
-            self.vault_path / 'Pending_Approval',
-            self.vault_path / 'Approved',
-            self.vault_path / 'Done'
-        ]
-
-        total_loaded = 0
-        for folder in folders_to_scan:
-            if not folder.exists():
-                continue
-
-            try:
-                existing_files = list(folder.glob("WHATSAPP_*.md"))
-                for filepath in existing_files:
-                    content = filepath.read_text(encoding='utf-8')
-
-                    # Extract sender and message content
-                    sender = ""
-                    message_content = ""
-
-                    if '## From:' in content:
-                        sender_part = content.split('## From:')[1].split('##')[0].strip()
-                        sender = sender_part
-
-                    if '## Message Content' in content:
-                        message_content = content.split('## Message Content')[1].split('##')[0].strip()
-
-                    # Generate hash using same method as runtime: sender + content[:100] (index-independent)
-                    if sender and message_content:
-                        content_hash = hashlib.md5((sender + message_content[:100]).encode()).hexdigest()[:8]
-                        msg_id = f"WHATSAPP_MSG_{content_hash}"
-                        self.processed_messages.add(msg_id)
-                        total_loaded += 1
-
-            except Exception as e:
-                logger.debug(f"Could not scan folder {folder}: {e}")
-
-        logger.info(f"Loaded {total_loaded} processed messages from existing files")
-
-        # Save to state file for next time
-        if total_loaded > 0:
-            self._save_state()
-
-    def _save_state(self):
-        """Save processed messages to persistent state file."""
-        try:
-            state_data = {
-                'processed_messages': list(self.processed_messages),
-                'last_updated': datetime.now().isoformat()
-            }
-            self.state_file.write_text(json.dumps(state_data, indent=2), encoding='utf-8')
-            logger.debug(f"Saved {len(self.processed_messages)} processed messages to state file")
-        except Exception as e:
-            logger.warning(f"Could not save state file: {e}")
-
-    def _get_message_id(self, sender: str, content: str, index: int = None) -> str:
-        """Generate a stable message ID based on content, not timestamp or index.
-
-        IMPORTANT: Hash is index-independent since same message can be detected
-        at different positions in different runs.
-        """
-        import hashlib
-        # Create stable ID from sender + content hash only (NO index)
-        # This ensures the same message always gets the same ID regardless of chat position
-        content_hash = hashlib.md5((sender + content[:100]).encode()).hexdigest()[:8]
-        return f"WHATSAPP_MSG_{content_hash}"
+        logger.info(f"Already processed: {self.dedup.get_count()} messages")
 
     def _start_browser(self):
         """Start the browser and keep it open for subsequent checks."""
@@ -499,10 +415,9 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
             if preview_info.get('found', 0) > 0:
                 for msg_data in preview_info.get('messages', []):
                     # Use stable ID based on content
-                    msg_id = self._get_message_id(msg_data['sender'], msg_data['content'], msg_data['index'])
-                    if msg_id not in self.processed_messages:
-                        self.processed_messages.add(msg_id)
-                        self._save_state()  # Persist after adding new message
+                    msg_id = self.dedup.get_id_from_content(msg_data['sender'], msg_data['content'])
+                    if not self.dedup.is_processed(msg_id):
+                        self.dedup.mark_processed(msg_id)  # Persist after adding new message
 
                         messages.append({
                             'id': msg_id,
@@ -599,11 +514,10 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
 
                             if self._is_important(msg_text):
                                 # Use stable ID based on content
-                                msg_id = self._get_message_id(sender, msg_text, i)
+                                msg_id = self.dedup.get_id_from_content(sender, msg_text)
 
-                                if msg_id not in self.processed_messages:
-                                    self.processed_messages.add(msg_id)
-                                    self._save_state()  # Persist after adding new message
+                                if not self.dedup.is_processed(msg_id):
+                                    self.dedup.mark_processed(msg_id)  # Persist after adding new message
 
                                     messages.append({
                                         'id': msg_id,
@@ -631,10 +545,9 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
 
                             for line in lines:
                                 if self._is_important(line):
-                                    msg_id = self._get_message_id(current_sender, line, i)
-                                    if msg_id not in self.processed_messages:
-                                        self.processed_messages.add(msg_id)
-                                        self._save_state()  # Persist after adding new message
+                                    msg_id = self.dedup.get_id_from_content(current_sender, line)
+                                    if not self.dedup.is_processed(msg_id):
+                                        self.dedup.mark_processed(msg_id)  # Persist after adding new message
 
                                         messages.append({
                                             'id': msg_id,
