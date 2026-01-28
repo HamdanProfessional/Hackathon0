@@ -82,7 +82,8 @@ module.exports = {
       env: {
         'PYTHONUNBUFFERED': '1',
         'PYTHONIOENCODING': 'utf-8',
-        'CLOUD_MODE': 'true'
+        'CLOUD_MODE': 'true',
+        'SLACK_BOT_TOKEN': process.env.SLACK_BOT_TOKEN || ''
       },
       error_file: path.join(PROJECT_ROOT, 'logs', 'slack-watcher-error.log'),
       out_file: path.join(PROJECT_ROOT, 'logs', 'slack-watcher-out.log'),

@@ -10,6 +10,8 @@ Usage:
     python run_research_processor.py --vault AI_Employee_Vault
 """
 
+from __future__ import annotations
+
 import sys
 import os
 from pathlib import Path

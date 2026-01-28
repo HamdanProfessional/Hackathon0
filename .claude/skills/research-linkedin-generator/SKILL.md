@@ -4,13 +4,29 @@
 
 This skill enables the AI Employee to autonomously research any topic and generate professional LinkedIn posts through a multi-stage process with human-in-the-loop approval.
 
+## What's New in v2.0
+
+### 🔬 Deep Research Mode
+- **3-Level Research Methodology**: Surface articles → Documentation → Library/Package analysis
+- **GitHub Repository Analysis**: Extracts stars, forks, language, topics for code libraries
+- **Package Manager Integration**: Analyzes PyPI, NPM, crates.io packages
+- **Technology Stack Detection**: Identifies frameworks, libraries, and tools
+- **Enhanced Content**: Posts include library insights and technical context
+
+### Bug Fixes
+- Added UTF-8 encoding to all file operations
+- Added `from __future__ import annotations` for type hints
+- Fixed type hints throughout codebase
+- Added proper error handling for JSON parsing
+- Fixed division by zero issues
+
 ## Skill Metadata
 
 ```yaml
 name: research-linkedin-generator
-version: 1.0.0
+version: 2.0.0
 author: AI Employee
-description: Research topics and generate professional LinkedIn posts with approval workflow
+description: Multi-level research and generate professional LinkedIn posts with approval workflow
 ```
 
 ---
@@ -22,7 +38,7 @@ You are the **Research & LinkedIn Content Generator** for the AI Employee system
 ## Workflow Overview
 
 ```
-User Request → Research → Extract → Analyze → Draft → Approval → Post
+User Request → Research (3 Levels) → Extract → Analyze → Draft → Approval → Post
 ```
 
 ### Phase 1: Research (Browser Automation)
@@ -399,11 +415,21 @@ approval:
 
 ## Dependencies
 
+### Required
 - Python playwright for browser automation
 - trafilatura for content extraction
-- Python markdown for file formatting
 - GLM-4.7 for text generation
 - MCP servers: playwright, filesystem
+
+### Optional (for Deep Research Mode)
+- requests: HTTP client for API calls
+- beautifulsoup4: HTML parsing for documentation extraction
+- json: For JSON parsing (built-in)
+
+Install optional dependencies:
+```bash
+pip install requests beautifulsoup4
+```
 
 ---
 
@@ -416,6 +442,118 @@ This skill integrates with existing AI Employee components:
 3. **MCP Servers**: playwright (browser), filesystem (file ops)
 4. **Vault**: Uses standard folder structure
 5. **Human-in-the-Loop**: Pending_Approval workflow enforced
+
+---
+
+## 🔬 Deep Research Mode
+
+### Overview
+
+Deep Research Mode goes beyond surface-level article scraping to provide comprehensive multi-level research:
+
+**Level 1: Surface Research**
+- Extract content from articles and blog posts
+- Get publication metadata (authors, dates, publications)
+- Identify key themes and statistics
+
+**Level 2: Documentation Research**
+- Find official documentation sites
+- Extract API references and guides
+- Identify getting started materials
+- Collect tutorial and guide content
+
+**Level 3: Library/Package Research**
+- Analyze GitHub repositories (stars, forks, language, topics)
+- Extract package information (PyPI, NPM, crates.io, etc.)
+- Identify dependencies and version history
+- Assess community activity and code quality
+
+### Technology Stack Detection
+
+Deep research automatically identifies:
+- **Programming Languages**: Python, JavaScript, Rust, Go, etc.
+- **Frameworks**: React, Vue, Django, Flask, Express, etc.
+- **Libraries**: pandas, numpy, tensorflow, etc.
+- **Tools**: Docker, Kubernetes, Git, etc.
+
+### Enhanced Post Generation
+
+Posts created with Deep Research include:
+- Standard article analysis
+- GitHub repository insights (stars, language, activity)
+- Package version information
+- Technology stack overview
+- Multiple source types (articles, docs, repos)
+
+### Usage
+
+#### Command Line
+
+```bash
+# Standard research
+python scripts/research.py --topic "Rust programming" --process-topic
+
+# Deep research (all 3 levels)
+python scripts/research.py --topic "Rust programming" --deep-research --depth 3
+
+# Deep research (documentation only - levels 1-2)
+python scripts/research.py --topic "Rust programming" --deep-research --depth 2
+
+# Deep research with provided URLs
+python scripts/research.py --topic "Rust programming" --deep-research --urls "https://www.rust-lang.org/,https://github.com/rust-lang/rust"
+```
+
+#### From Python API
+
+```python
+from scripts.research import ResearchLinkedInGenerator
+
+generator = ResearchLinkedInGenerator()
+
+# Standard research
+generator._process_research("AI in healthcare", None)
+
+# Deep research
+approval = generator.process_deep_research("Rust programming", max_depth=3)
+
+if approval:
+    print(f"Deep research complete! Review at: {approval}")
+```
+
+### Deep Research Output
+
+Posts created with deep research have enhanced metadata:
+
+```markdown
+---
+type: linkedin_post
+research_type: deep_research
+research_depth: 3
+---
+
+## Technology Stack Identified
+
+### Technologies
+  - rust
+  - ownership
+  - type-safety
+
+### Frameworks
+  - tokio
+  - async-std
+
+### Libraries & Tools
+  - cargo
+  - clippy
+
+## GitHub Repositories Analyzed
+  - [rust-lang/rust](https://github.com/rust-lang/rust) - 85000 ⭐, Rust
+  - [tokio-rs/tokio](https://github.com/tokio-rs/tokio) - 23000 ⭐, Rust
+
+## Package References
+  - [serde](https://crates.io/crates/serde) - crates.io
+  - [clippy](https://github.com/rust-lang/rust-clippy) - GitHub
+```
 
 ---
 

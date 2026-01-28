@@ -249,17 +249,33 @@ python scripts/cross_domain_insights.py --vault AI_Employee_Vault
 
 ---
 
-## Cloud Updates (2026-01-20 12:25:05)
+## Cloud Updates
 
-*Merged from Cloud VM via Git sync*
+_Last update: 2026-01-21 18:48:30_
 
+### System Health
 
-📝 **README.md**
+- **Hostname:** hackathon0-1vcpu-1gb
+- **Uptime:** 2 days, 22:51:47.739027
+- **CPU:** 100.0%
+- **Memory:** 85.1%
+- **Disk:** 22.0%
 
-# Updates - Cloud → Local Communication
+### Cloud Processes
 
-This folder is used by the **Cloud Agent** to write updates that the **Local Agent** should merge into the Dashboard.
+- ✅ **gmail-watcher**: online (CPU: 0.0%, Mem: 22.4MB)
+- ✅ **calendar-watcher**: online (CPU: 0.0%, Mem: 23.3MB)
+- ✅ **slack-watcher**: online (CPU: 0.0%, Mem: 25.4MB)
+- ✅ **odoo-watcher**: online (CPU: 0.0%, Mem: 21.0MB)
+- ❌ **git-sync-push**: stopped (CPU: 0.0%, Mem: 0.0MB)
+- ✅ **cloud-health-monitor**: online (CPU: 0.1%, Mem: 15.8MB)
+- ✅ **auto-approver**: online (CPU: 0.0%, Mem: 28.6MB)
 
+### Alerts
+
+- ⚠️ HIGH CPU: 100.0%
+- ⚠️ HIGH MEMORY: 85.1%
+- ⚠️ PROCESS STOPPED: git-sync-push
 ## Purpose
 
 The **single-writer rule** states that only Local should update `Dashboard.md` directly. Cloud writes updates to this folder, and Local merges them.
