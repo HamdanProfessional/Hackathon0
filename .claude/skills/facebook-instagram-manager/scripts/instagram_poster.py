@@ -219,14 +219,16 @@ def generate_instagram_image(text: str, output_path: str) -> Path:
                    fill=theme['accent'])
 
     # Footer text with shadow effect
-    footer_text = "Built with AI Employee"
+    footer_text = ""  # No footer text
 
-    # Draw shadow
-    draw.text((padding + 3, footer_y + 3), footer_text,
-             fill=(0, 0, 0, 128), font=font_footer)
-    # Draw main text
-    draw.text((padding, footer_y), footer_text,
-             fill=(255, 255, 255), font=font_footer)
+    # Only draw if there's text
+    if footer_text:
+        # Draw shadow
+        draw.text((padding + 3, footer_y + 3), footer_text,
+                 fill=(0, 0, 0, 128), font=font_footer)
+        # Draw main text
+        draw.text((padding, footer_y), footer_text,
+                 fill=(255, 255, 255), font=font_footer)
 
     # Add small decorative dots
     dot_y = footer_y + 45

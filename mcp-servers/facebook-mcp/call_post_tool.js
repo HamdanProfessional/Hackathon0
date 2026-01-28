@@ -112,46 +112,88 @@ async function postToFacebook(content) {
     console.error("[Facebook] Looking for create post input...");
     await page.waitForTimeout(2000);
 
-    // Click on the "What's on your mind" input to open the composer
+    // Facebook often requires clicking the composer area to activate the content editor
+    console.error("[Facebook] Looking for compose button...");
+
+    // Try clicking multiple elements to fully open the composer
+    let composeClicked = false;
     try {
-      const composeButton = await page.$('[role="button"]:has-text("What\'s on your mind"), [role="button"].xi81zsa');
-      if (composeButton) {
-        console.error("[Facebook] Clicking compose button...");
-        await composeButton.click();
-        await page.waitForTimeout(2000);
+      // First try: Click "What's on your mind" button using Playwright's text matching
+      try {
+        await page.getByRole('button', { name: "What's on your mind" }).click({ timeout: 5000 });
+        composeClicked = true;
+        console.error("[Facebook] ✓ Clicked compose button via role/name");
+      } catch {
+        // Fallback to query selector
+        let clicked = await page.evaluate(() => {
+          const selectors = [
+            '[role="button"]:has-text("What\'s on your mind")',
+            '[role="button"] div:has-text("What\'s on your mind")',
+            'div[role="button"] span:has-text("What\'s on your mind")',
+            'span:has-text("What\'s on your mind,")',
+          ];
+          for (const selector of selectors) {
+            const el = document.querySelector(selector);
+            if (el && el.offsetParent !== null) { // Check if visible
+              el.click();
+              return true;
+            }
+          }
+          return false;
+        });
+
+        if (clicked) {
+          composeClicked = true;
+          console.error("[Facebook] ✓ Clicked compose button via evaluate");
+        }
       }
-    } catch {
-      console.error("[Facebook] Could not find compose button, trying direct fill...");
+    } catch (e) {
+      console.error("[Facebook] Compose button click failed:", e.message);
     }
 
-    // Wait for content editor
-    try {
-      await page.waitForSelector('[role="button"]:has-text("What\'s on your mind"), div[contenteditable="true"]', { timeout: 10000 });
-      console.error("[Facebook] Create post modal loaded");
-    } catch {
-      console.error("[Facebook] Warning: Modal might not be fully loaded, trying anyway...");
+    // Wait longer for modal to fully load
+    if (composeClicked) {
+      console.error("[Facebook] Waiting for modal to fully load...");
+      await page.waitForTimeout(3000);
     }
 
     // Type content
-    console.error("[Facebook] Typing post content...");
+    console.error("[Facebook] Looking for content editor...");
 
     const contentSelectors = [
-      'div[contenteditable="true"]', // Facebook's contenteditable div in composer
-      '[role="textbox"]',
-      '[role="button"]:has(span:has-text("What\'s on your mind"))', // Click to focus
-      'span.x1lliihq:has-text("What\'s on your mind")',
+      // Facebook-specific selectors for React composer
+      'div[contenteditable="true"][data-lexical-text="true"]',  // New Facebook Lexical editor
+      'div[contenteditable="true"][role="textbox"]',  // Contenteditable with textbox role
+      'div[contenteditable="true"].x1urgmv5',  // Specific class for Facebook composer
+      'div[contenteditable="true"]',  // Generic contenteditable
+      'div[role="textbox"]',  // ARIA role
+      'textarea[placeholder*="What\'s on your mind"]',  // Textarea with placeholder
+      'textarea',  // Generic textarea
+      'input[type="text"]',  // Generic text input
     ];
 
     let typed = false;
     for (const selector of contentSelectors) {
       try {
-        if (await page.isVisible(selector, { timeout: 63206 })) {
-          await page.fill(selector, content);
-          typed = true;
-          console.error("[Facebook] Content typed successfully");
-          break;
+        console.error(`[Facebook] Trying selector: ${selector}`);
+        // Check if element exists and is visible
+        const element = await page.$(selector);
+        if (element) {
+          const isVisible = await element.isVisible();
+          if (isVisible) {
+            console.error(`[Facebook] ✓ Found visible element: ${selector}`);
+            // Click to focus first (important for contenteditable)
+            await element.click();
+            await page.waitForTimeout(500);
+            // Then fill
+            await page.fill(selector, content);
+            typed = true;
+            console.error("[Facebook] ✓ Content typed successfully");
+            break;
+          }
         }
-      } catch {
+      } catch (e) {
+        console.error(`[Facebook] Selector ${selector} failed: ${e.message}`);
         continue;
       }
     }
@@ -166,23 +208,36 @@ async function postToFacebook(content) {
     if (!DRY_RUN) {
       console.error("[Facebook] Clicking 'Post' button...");
 
+      // Wait a bit longer for Facebook to enable the Post button
+      await page.waitForTimeout(1000);
+
       const postButtonSelectors = [
         '[aria-label="Post"][role="button"]', // Most reliable - Facebook uses aria-label
         'div[aria-label="Post"][role="button"]', // Sometimes wrapped in div
+        'div.x1i10hfl.xjbqb8w.x1ejq31n[role="button"]', // With specific classes
         'span:has-text("Post")', // Fallback to text
       ];
 
       let posted = false;
       for (const selector of postButtonSelectors) {
         try {
+          console.error(`[Facebook] Trying Post selector: ${selector}`);
           const element = await page.$(selector);
           if (element) {
-            await element.click();
-            posted = true;
-            console.error("[Facebook] Post button clicked via:", selector);
-            break;
+            // Check if element is visible and enabled
+            const isVisible = await element.isVisible();
+            const isDisabled = await element.isDisabled();
+            if (isVisible && !isDisabled) {
+              await element.click();
+              posted = true;
+              console.error("[Facebook] ✓ Post button clicked via:", selector);
+              break;
+            } else {
+              console.error(`[Facebook] Button found but visible=${isVisible}, disabled=${isDisabled}`);
+            }
           }
-        } catch {
+        } catch (e) {
+          console.error(`[Facebook] Selector ${selector} failed: ${e.message}`);
           continue;
         }
       }
@@ -198,8 +253,14 @@ async function postToFacebook(content) {
         }
       }
 
-      await page.waitForTimeout(63206);
+      await page.waitForTimeout(5000);
       console.error("[Facebook] Post should be live now!");
+
+      // Refresh page to ensure clean state for next post
+      console.error("[Facebook] Refreshing page after posting...");
+      await page.goto('https://www.facebook.com/feed/', { waitUntil: "domcontentloaded", timeout: 60000 });
+      await page.waitForTimeout(2000);
+      console.error("[Facebook] ✓ Page refreshed for next post");
     } else {
       console.error("[Facebook] DRY RUN MODE - Skipping Post click");
     }

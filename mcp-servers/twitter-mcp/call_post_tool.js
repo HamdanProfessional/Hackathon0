@@ -18,8 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Configuration
-const TWITTER_URL = "https://www.twitter.com/feed/";
-const TWITTER_CREATE_POST_URL = "https://www.twitter.com/in/hamdan-mohammad-922486374/overlay/create-post/";
+const TWITTER_COMPOSE_URL = "https://x.com/compose/post";
 const CDP_ENDPOINT = "http://127.0.0.1:9222";
 
 // DRY_RUN mode
@@ -75,63 +74,65 @@ async function postToTwitter(content) {
       page = pages[0];
     }
 
-    // Navigate to Twitter/X feed (only if not already on Twitter/X)
-    if (!page.url().includes('twitter.com') && !page.url().includes('x.com')) {
-      console.error("[Twitter/X] Navigating to Twitter/X...");
-      await page.goto(TWITTER_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    }
-    await page.waitForTimeout(3000);
-
-    // Check login status - simplified: if we're on Twitter/X and not on login page, we're good
-    console.error("[Twitter/X] Checking login status...");
+    // Navigate to Twitter/X compose page
     const currentUrl = page.url();
+    console.error("[Twitter/X] Current URL:", currentUrl);
 
-    if (currentUrl.includes('/login') || currentUrl.includes('i/flow/login')) {
-      console.error("[Twitter/X] Detected login page, URL:", currentUrl);
+    // Check if we need to navigate to compose page
+    if (!currentUrl.includes('x.com/compose/post')) {
+      console.error("[Twitter/X] Navigating to compose page...");
+      await page.goto(TWITTER_COMPOSE_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await page.waitForTimeout(3000);
+    }
+
+    // Verify we're on the compose page
+    const newUrl = page.url();
+    console.error("[Twitter/X] New URL:", newUrl);
+
+    // Check login status
+    if (newUrl.includes('/login') || newUrl.includes('i/flow/login') || newUrl.includes('i/flow/signup')) {
+      console.error("[Twitter/X] Detected login page");
       throw new Error("Not logged in to Twitter/X. Please log in via the Chrome automation window.");
     }
 
-    // If we're on a Twitter/X page that's not the login page, assume we're logged in
-    if (currentUrl.includes('twitter.com') || currentUrl.includes('x.com')) {
-      console.error("[Twitter/X] ✓ Logged in detected (on Twitter/X page)");
-    } else {
-      throw new Error("Not on Twitter/X. Please navigate to Twitter/X in the Chrome automation window.");
-    }
+    console.error("[Twitter/X] ✓ On compose page");
 
-    // Navigate to create post
-    console.error("[Twitter/X] Opening create post overlay...");
-    await page.goto(TWITTER_CREATE_POST_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    // Wait for content editor to be available
+    console.error("[Twitter/X] Looking for content editor...");
     await page.waitForTimeout(2000);
-
-    // Wait for content editor
-    try {
-      await page.waitForSelector('div[contenteditable="true"]', { timeout: 10000 });
-      console.error("[Twitter/X] Create post modal loaded");
-    } catch {
-      console.error("[Twitter/X] Warning: Modal might not be fully loaded, trying anyway...");
-    }
 
     // Type content
     console.error("[Twitter/X] Typing post content...");
 
     const contentSelectors = [
-      'div[contenteditable="true"][role="textbox"]',
-      '.ql-editor',
-      '[data-artdeco-is="focused"]',
-      'div[role="textbox"]',
-      '[contenteditable="true"]'
+      'div[contenteditable="true"][data-testid="tweetTextarea_0"]',  // X.com specific
+      'div[contenteditable="true"][role="textbox"]',  // Generic with role
+      'div[role="textbox"]',  // By role
+      '[data-testid="tweetTextarea_0"]',  // By testid
+      'div[contenteditable="true"]',  // Generic contenteditable
     ];
 
     let typed = false;
     for (const selector of contentSelectors) {
       try {
-        if (await page.isVisible(selector, { timeout: 280 })) {
-          await page.fill(selector, content);
-          typed = true;
-          console.error("[Twitter/X] Content typed successfully");
-          break;
+        console.error(`[Twitter/X] Trying selector: ${selector}`);
+        const element = await page.$(selector);
+        if (element) {
+          const isVisible = await element.isVisible();
+          if (isVisible) {
+            console.error(`[Twitter/X] ✓ Found visible element: ${selector}`);
+            // Click to focus first
+            await element.click();
+            await page.waitForTimeout(500);
+            // Then fill
+            await page.fill(selector, content);
+            typed = true;
+            console.error("[Twitter/X] ✓ Content typed successfully");
+            break;
+          }
         }
-      } catch {
+      } catch (e) {
+        console.error(`[Twitter/X] Selector ${selector} failed: ${e.message}`);
         continue;
       }
     }
@@ -140,43 +141,58 @@ async function postToTwitter(content) {
       throw new Error("Could not find content editor to type post");
     }
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
     // Click Post button (or skip if dry run)
     if (!DRY_RUN) {
       console.error("[Twitter/X] Clicking 'Post' button...");
 
+      // Wait a bit longer for Twitter to enable the Post button
+      await page.waitForTimeout(1000);
+
       const postButtonSelectors = [
-        'button.share-actions__primary-action:not(.share-actions__scheduled-post-btn):has(span:has-text("Post"))',
-        'button.share-actions__primary-action.artdeco-button--primary:not(.artdeco-button--tertiary):has(span:has-text("Post"))',
+        '[data-testid="tweetButtonInline"]',  // X.com specific
+        '[data-testid="tweetButton"]',  // Alternative X.com selector
+        'button[role="button"]:has-text("Post")',  // By role and text
+        'div[role="button"] span:has-text("Post")',  // Nested structure
+        'button:has-text("Post")',  // Generic button
       ];
 
       let posted = false;
       for (const selector of postButtonSelectors) {
         try {
-          if (await page.isVisible(selector, { timeout: 280 })) {
-            await page.click(selector);
-            posted = true;
-            console.error("[Twitter/X] Post button clicked");
-            break;
+          console.error(`[Twitter/X] Trying Post selector: ${selector}`);
+          const element = await page.$(selector);
+          if (element) {
+            const isVisible = await element.isVisible();
+            const isDisabled = await element.isDisabled();
+            if (isVisible && !isDisabled) {
+              await element.click();
+              posted = true;
+              console.error(`[Twitter/X] ✓ Post button clicked via: ${selector}`);
+              break;
+            } else {
+              console.error(`[Twitter/X] Button found but visible=${isVisible}, disabled=${isDisabled}`);
+            }
           }
-        } catch {
+        } catch (e) {
+          console.error(`[Twitter/X] Selector ${selector} failed: ${e.message}`);
           continue;
         }
       }
 
       if (!posted) {
-        // Try via role
+        // Try via Playwright's getByRole as last resort
         try {
-          await page.getByRole("button", { name: "Post" }).click({ timeout: 5000 });
+          await page.getByRole('button', { name: 'Post' }).click({ timeout: 5000 });
           posted = true;
-          console.error("[Twitter/X] Clicked via role/name");
+          console.error("[Twitter/X] ✓ Clicked via role/name");
         } catch {
           throw new Error("Could not find or click 'Post' button");
         }
       }
 
-      await page.waitForTimeout(280);
+      await page.waitForTimeout(5000);
       console.error("[Twitter/X] Post should be live now!");
     } else {
       console.error("[Twitter/X] DRY RUN MODE - Skipping Post click");

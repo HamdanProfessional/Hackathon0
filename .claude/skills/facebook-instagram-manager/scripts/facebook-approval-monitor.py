@@ -214,6 +214,19 @@ class FacebookApprovalMonitor:
             # Get content
             content = post_details.get('content', '')
 
+            # Add extra space after hashtags for better formatting
+            if content and content.endswith('#'):
+                # Already has trailing space after hashtag
+                pass
+            elif content:
+                # Check if content ends with hashtags and add space
+                import re
+                # Match hashtags at the end of content
+                hashtag_pattern = r'(?:\s*#[\w]+)+\s*$'
+                if re.search(hashtag_pattern, content):
+                    # Content ends with hashtags, add extra space
+                    content = content.rstrip() + '  '
+
             # Call the MCP wrapper via Node.js
             env = os.environ.copy()
             # Pass through FACEBOOK_DRY_RUN setting

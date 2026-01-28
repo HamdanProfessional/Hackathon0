@@ -139,11 +139,9 @@ async function postToInstagram(content) {
       page = pages[0];
     }
 
-    // Navigate to Instagram feed (only if not already on Instagram)
-    if (!page.url().includes('instagram.com')) {
-      console.error("[Instagram] Navigating to Instagram...");
-      await page.goto(INSTAGRAM_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    }
+    // Refresh the page to ensure clean state for new post
+    console.error("[Instagram] Refreshing page for clean state...");
+    await page.goto('https://www.instagram.com/', { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForTimeout(3000);
 
     // Check login status - simplified: if we're on Instagram and not on login page, we're good
@@ -155,14 +153,6 @@ async function postToInstagram(content) {
     if (currentUrl.includes('/login') || currentUrl.includes('accounts/login')) {
       console.error("[Instagram] Detected login page, URL:", currentUrl);
       throw new Error("Not logged in to Instagram. Please log in via the Chrome automation window.");
-    }
-
-    // If we're not on Instagram, automatically navigate there
-    if (!currentUrl.includes('instagram.com')) {
-      console.error("[Instagram] Not on Instagram, navigating automatically...");
-      await page.goto('https://www.instagram.com/feed/', { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(3000);
-      console.error("[Instagram] ✓ Navigated to Instagram");
     }
 
     // Verify we're now on Instagram
@@ -224,8 +214,8 @@ async function postToInstagram(content) {
           // Find the file input element
           const fileInput = await page.$('input[type="file"]');
           if (fileInput) {
-            // Upload the image
-            await fileInput.uploadFile(imagePath);
+            // Upload the image using setInputFiles
+            await fileInput.setInputFiles(imagePath);
             console.error("[Instagram] ✓ Image uploaded successfully");
             await page.waitForTimeout(3000);
 
@@ -288,28 +278,43 @@ async function postToInstagram(content) {
     console.error("[Instagram] Typing caption...");
 
     const contentSelectors = [
-      'textarea[placeholder*="Caption"]',  // Instagram's caption textarea
-      'textarea[aria-label*="Write a caption"]',  // Aria-label based
-      'textarea[aria-label*="Add a caption"]',  // Alternative aria-label
+      'textarea[aria-label="Write a caption..."]',  // Instagram's caption textarea (exact)
+      'textarea[aria-label="Caption"]',  // Aria-label exact match
+      'textarea[aria-label*="caption"]',  // Aria-label contains "caption" (case insensitive)
+      'textarea[placeholder*="Caption"]',  // Placeholder based
+      'textarea[data-testid="post-caption-text-area"]',  // By testid
+      'div[contenteditable="true"][data-lexical-text="true"]',  // Lexical editor
+      'div[role="textbox"]',  // By role
       'div[contenteditable="true"]',  // Contenteditable div (fallback)
     ];
 
     let typed = false;
     for (const selector of contentSelectors) {
       try {
-        if (await page.isVisible(selector, { timeout: 2200 })) {
-          await page.fill(selector, content);
-          typed = true;
-          console.error("[Instagram] Content typed successfully");
-          break;
+        console.error(`[Instagram] Trying caption selector: ${selector}`);
+        const element = await page.$(selector);
+        if (element) {
+          const isVisible = await element.isVisible();
+          if (isVisible) {
+            console.error(`[Instagram] ✓ Found visible caption element: ${selector}`);
+            // Click to focus first
+            await element.click();
+            await page.waitForTimeout(500);
+            // Then fill
+            await page.fill(selector, content);
+            typed = true;
+            console.error("[Instagram] ✓ Caption typed successfully");
+            break;
+          }
         }
-      } catch {
+      } catch (e) {
+        console.error(`[Instagram] Caption selector ${selector} failed: ${e.message}`);
         continue;
       }
     }
 
     if (!typed) {
-      throw new Error("Could not find content editor to type post");
+      throw new Error("Could not find caption editor to type post");
     }
 
     await page.waitForTimeout(2000);
@@ -317,6 +322,9 @@ async function postToInstagram(content) {
     // Click Share button (or skip if dry run)
     if (!DRY_RUN) {
       console.error("[Instagram] Clicking 'Share' button...");
+
+      // Wait a bit longer for Instagram to enable the Share button
+      await page.waitForTimeout(1000);
 
       const postButtonSelectors = [
         'div[role="button"]:has-text("Share")', // Based on HTML provided
@@ -328,14 +336,22 @@ async function postToInstagram(content) {
       let posted = false;
       for (const selector of postButtonSelectors) {
         try {
+          console.error(`[Instagram] Trying Share selector: ${selector}`);
           const element = await page.$(selector);
           if (element) {
-            await element.click();
-            posted = true;
-            console.error("[Instagram] Share button clicked via:", selector);
-            break;
+            const isVisible = await element.isVisible();
+            const isDisabled = await element.isDisabled();
+            if (isVisible && !isDisabled) {
+              await element.click();
+              posted = true;
+              console.error(`[Instagram] ✓ Share button clicked via: ${selector}`);
+              break;
+            } else {
+              console.error(`[Instagram] Button found but visible=${isVisible}, disabled=${isDisabled}`);
+            }
           }
-        } catch {
+        } catch (e) {
+          console.error(`[Instagram] Selector ${selector} failed: ${e.message}`);
           continue;
         }
       }
@@ -343,16 +359,22 @@ async function postToInstagram(content) {
       if (!posted) {
         // Try via Playwright's getByRole as last resort
         try {
-          await page.getByRole("button", { name: "Share" }).click({ timeout: 5000 });
+          await page.getByRole('button', { name: 'Share' }).click({ timeout: 5000 });
           posted = true;
-          console.error("[Instagram] Clicked via role/name");
+          console.error("[Instagram] ✓ Clicked via role/name");
         } catch {
           throw new Error("Could not find or click 'Share' button");
         }
       }
 
-      await page.waitForTimeout(2200);
+      await page.waitForTimeout(5000);
       console.error("[Instagram] Post should be live now!");
+
+      // Refresh page to ensure clean state for next post
+      console.error("[Instagram] Refreshing page after posting...");
+      await page.goto('https://www.instagram.com/', { waitUntil: "domcontentloaded", timeout: 60000 });
+      await page.waitForTimeout(2000);
+      console.error("[Instagram] ✓ Page refreshed for next post");
     } else {
       console.error("[Instagram] DRY RUN MODE - Skipping Post click");
     }
