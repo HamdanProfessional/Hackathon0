@@ -402,8 +402,17 @@ odoo_type: {event.get('type')}
                     for inv in all_invoices:
                         if inv["state"] == "posted":
                             accounting_data["invoices_sent"].append(inv)
+                        # Only add to overdue if not paid AND past due date
                         if inv["payment_state"] not in ["paid", "reversed"]:
-                            accounting_data["invoices_overdue"].append(inv)
+                            # Check if invoice is actually overdue (due date has passed)
+                            try:
+                                due_date = datetime.strptime(inv["due_date"], "%Y-%m-%d")
+                                # Compare dates only (ignore time)
+                                if due_date.date() < now.date():
+                                    accounting_data["invoices_overdue"].append(inv)
+                            except (ValueError, KeyError):
+                                # If we can't parse the due date, skip it
+                                pass
 
                     # Get payments this month
                     payments = self.odoo_client.get_payments(
@@ -522,7 +531,7 @@ odoo_connected: {str(odoo_connected).lower()}
         content += f"""
 ## Profit & Loss
 - **Revenue:** ${data['revenue']:,.2f}
-- **Expenses:** ($${data['expenses']:,.2f})
+- **Expenses:** ${data['expenses']:,.2f}
 - **Net Profit:** ${net_profit:,.2f}
 
 ## Notes
