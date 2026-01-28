@@ -663,7 +663,7 @@ When making changes to the AI Employee system:
 
 ---
 
-*Updated: 2026-01-21*
+*Updated: 2026-01-28*
 **Production System - Cloud + Local Architecture**
 *LinkedIn: ✅ Operational with summary generation*
 *Twitter/X: ✅ Operational with summary generation*
@@ -674,8 +674,17 @@ When making changes to the AI Employee system:
 *All approval monitors in LIVE mode*
 *20 PM2 processes running (0 crashes)*
 *Research LinkedIn Generator: ✅ Daily automated research & posting*
+*PLATINUM TIER: ✅ ~92% Complete (11/12 requirements)*
 
-**Recent Improvements (v1.5.0):**
+**Recent Improvements (v1.6.0 - PLATINUM TIER):**
+- 🏆 **Platinum Tier Completion** - Git sync fixed, domain folders created, claim-by-move integrated
+- 🔄 **Git Sync Fixed** - Resolved diverged branches, rebased 2198 Cloud commits onto origin/main
+- 📁 **Domain Folder Structure** - Created Personal/Business/Shared subfolders in Done/, Rejected/, Updates/, In_Progress/
+- 🤝 **Claim-by-Move Integration** - ClaimManager added to BaseWatcher, prevents double-processing
+- 🏥 **Health Monitoring Verified** - Cloud generating health updates every 5 minutes
+- ☁️ **Cloud-Local Sync** - bidirectional git sync working (Cloud pushes, Local pulls)
+
+**Previous Improvements (v1.5.0):**
 - 🔬 **Research LinkedIn Generator** - Daily automated research with GLM API
 - 🛡️ **Security Hardening** - Removed hardcoded credentials, added UTF-8 encoding
 - ⚡ **Performance Fixes** - Circuit breaker pattern, LRU eviction, reduced restarts
@@ -737,3 +746,69 @@ All social media platforms now generate summaries after posting:
 - **LinkedIn:** Post summaries with professional engagement metrics
 
 Summaries are saved to `/Briefings/` folder.
+
+---
+
+### Platinum Tier Features (NEW)
+
+**Cloud-Local Bidirectional Sync:**
+- Cloud VM (143.244.143.143) runs watchers 24/7
+- Git sync pushes Cloud changes every 5 minutes
+- Local pulls changes via git-sync-pull
+- Diverged branch detection and auto-rebase
+
+**Domain Folder Structure:**
+```
+AI_Employee_Vault/
+├── Done/
+│   ├── Personal/ - Completed personal tasks
+│   ├── Business/ - Completed business tasks
+│   └── Shared/ - Completed cross-domain tasks
+├── Rejected/
+│   ├── Personal/ - Declined personal items
+│   ├── Business/ - Declined business items
+│   └── Shared/ - Declined shared items
+├── Updates/
+│   ├── Personal/ - Cloud→Local communication (personal)
+│   ├── Business/ - Cloud→Local communication (business)
+│   └── Shared/ - Cloud→Local communication (shared)
+└── In_Progress/
+    ├── cloud/
+    │   ├── Personal/ - Cloud processing personal items
+    │   ├── Business/ - Cloud processing business items
+    │   └── Shared/ - Cloud processing shared items
+    └── local/
+        ├── Personal/ - Local processing personal items
+        ├── Business/ - Local processing business items
+        └── Shared/ - Local processing shared items
+```
+
+**Claim-by-Move Rule:**
+- Watchers can claim items before processing
+- Moves item to `In_Progress/<cloud|local>/` when claimed
+- Prevents double-processing between Cloud and Local
+- Auto-detected via `CLOUD_MODE` environment variable
+
+**Usage:**
+```python
+from watchers.gmail_watcher import GmailWatcher
+
+# Watcher automatically initializes Claim Manager
+watcher = GmailWatcher(vault_path="AI_Employee_Vault")
+
+# Claim an item before processing (optional)
+if watcher._claim_item(item_path):
+    # Process the item
+    result = watcher.process_item(item)
+else:
+    # Item already claimed by another agent
+    pass
+```
+
+**Health Monitoring:**
+- Cloud generates health updates every 5 minutes
+- Saved to `AI_Employee_Vault/Updates/cloud_health_*.json`
+- Includes CPU, memory, disk, network, process status
+- Alerts for high resource usage or stopped processes
+
+**See `AI_Employee_Vault/PLATINUM_TIER_COMPLETION_SUMMARY.md` for full details.**
