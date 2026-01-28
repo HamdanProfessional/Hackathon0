@@ -57,32 +57,45 @@ async function postToLinkedIn(content) {
     }
     context = contexts[0];
 
-    // Get or create page
+    // Find or create LinkedIn page
     const pages = context.pages();
-    if (pages.length === 0) {
+
+    // Look for existing LinkedIn page
+    const linkedinPage = pages.find(p => p.url().includes('linkedin.com'));
+
+    if (linkedinPage) {
+      console.error("[LinkedIn] Using existing LinkedIn tab");
+      page = linkedinPage;
+      // Bring the page to front
+      await page.bringToFront();
+    } else if (pages.length === 0) {
+      console.error("[LinkedIn] Creating new tab for LinkedIn");
       page = await context.newPage();
     } else {
       page = pages[0];
     }
 
-    // Navigate to LinkedIn
-    console.error("[LinkedIn] Navigating to LinkedIn...");
-    await page.goto(LINKEDIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForTimeout(3000);
+    // Navigate to LinkedIn feed (only if not already on LinkedIn)
+    if (!page.url().includes('linkedin.com')) {
+      console.error("[LinkedIn] Navigating to LinkedIn...");
+      await page.goto(LINKEDIN_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    }
+    await page.waitForTimeout(2000);
 
-    // Check login status
+    // Check login status - simplified: if we're on LinkedIn and not on login page, we're good
     console.error("[LinkedIn] Checking login status...");
-    const loggedIn = await page.evaluate(() => {
-      const indicators = [
-        '.global-nav__me',
-        '[data-control-name="identity_watcher_profile_photo"]',
-        '.profile-rail-card__actor-link',
-      ];
-      return indicators.some(selector => document.querySelector(selector));
-    });
+    const currentUrl = page.url();
 
-    if (!loggedIn) {
+    if (currentUrl.includes('/uas/login') || currentUrl.includes('/login') || currentUrl.includes('session_redirect')) {
+      console.error("[LinkedIn] Detected login page, URL:", currentUrl);
       throw new Error("Not logged in to LinkedIn. Please log in via the Chrome automation window.");
+    }
+
+    // If we're on a LinkedIn page that's not the login page, assume we're logged in
+    if (currentUrl.includes('linkedin.com')) {
+      console.error("[LinkedIn] ✓ Logged in detected (on LinkedIn page)");
+    } else {
+      throw new Error("Not on LinkedIn. Please navigate to LinkedIn in the Chrome automation window.");
     }
 
     // Navigate to create post

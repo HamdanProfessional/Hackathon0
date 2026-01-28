@@ -28,7 +28,7 @@ const DRY_RUN = process.env.TWITTER_DRY_RUN !== "false";
 /**
  * Post to Twitter/X using Playwright with Chrome CDP
  */
-async function postToTwitter/X(content) {
+async function postToTwitter(content) {
   console.error(`[Twitter/X] Starting post...`);
   console.error(`[Twitter/X] Content length: ${content.length} chars`);
   console.error(`[Twitter/X] Dry Run: ${DRY_RUN}`);
@@ -52,37 +52,50 @@ async function postToTwitter/X(content) {
     // Use the first available context from the connected browser
     // This ensures we use your existing profile
     const contexts = browser.contexts();
-    if (\!contexts || contexts.length === 0) {
+    if (!contexts || contexts.length === 0) {
       throw new Error('No browser contexts found. Is your main Chrome running with CDP?');
     }
     context = contexts[0];
 
-    // Get or create page
+    // Find or create X/Twitter page
     const pages = context.pages();
-    if (pages.length === 0) {
+
+    // Look for existing X/Twitter page
+    const twitterPage = pages.find(p => p.url().includes('twitter.com') || p.url().includes('x.com'));
+
+    if (twitterPage) {
+      console.error("[Twitter/X] Using existing X/Twitter tab");
+      page = twitterPage;
+      // Bring the page to front
+      await page.bringToFront();
+    } else if (pages.length === 0) {
+      console.error("[Twitter/X] Creating new tab for Twitter/X");
       page = await context.newPage();
     } else {
       page = pages[0];
     }
 
-    // Navigate to Twitter/X
-    console.error("[Twitter/X] Navigating to Twitter/X...");
-    await page.goto(TWITTER_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForTimeout(280);
+    // Navigate to Twitter/X feed (only if not already on Twitter/X)
+    if (!page.url().includes('twitter.com') && !page.url().includes('x.com')) {
+      console.error("[Twitter/X] Navigating to Twitter/X...");
+      await page.goto(TWITTER_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    }
+    await page.waitForTimeout(3000);
 
-    // Check login status
+    // Check login status - simplified: if we're on Twitter/X and not on login page, we're good
     console.error("[Twitter/X] Checking login status...");
-    const loggedIn = await page.evaluate(() => {
-      const indicators = [
-        '.global-nav__me',
-        '[data-control-name="identity_watcher_profile_photo"]',
-        '.profile-rail-card__actor-link',
-      ];
-      return indicators.some(selector => document.querySelector(selector));
-    });
+    const currentUrl = page.url();
 
-    if (!loggedIn) {
+    if (currentUrl.includes('/login') || currentUrl.includes('i/flow/login')) {
+      console.error("[Twitter/X] Detected login page, URL:", currentUrl);
       throw new Error("Not logged in to Twitter/X. Please log in via the Chrome automation window.");
+    }
+
+    // If we're on a Twitter/X page that's not the login page, assume we're logged in
+    if (currentUrl.includes('twitter.com') || currentUrl.includes('x.com')) {
+      console.error("[Twitter/X] ✓ Logged in detected (on Twitter/X page)");
+    } else {
+      throw new Error("Not on Twitter/X. Please navigate to Twitter/X in the Chrome automation window.");
     }
 
     // Navigate to create post
@@ -214,7 +227,7 @@ async function main() {
     process.exit(1);
   }
 
-  const result = await postToTwitter/X(content);
+  const result = await postToTwitter(content);
 
   // Output result as JSON
   console.log(JSON.stringify(result, null, 2));

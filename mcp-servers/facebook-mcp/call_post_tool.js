@@ -52,37 +52,50 @@ async function postToFacebook(content) {
     // Use the first available context from the connected browser
     // This ensures we use your existing profile
     const contexts = browser.contexts();
-    if (\!contexts || contexts.length === 0) {
+    if (!contexts || contexts.length === 0) {
       throw new Error('No browser contexts found. Is your main Chrome running with CDP?');
     }
     context = contexts[0];
 
-    // Get or create page
+    // Find or create Facebook page
     const pages = context.pages();
-    if (pages.length === 0) {
+
+    // Look for existing Facebook page
+    const facebookPage = pages.find(p => p.url().includes('facebook.com'));
+
+    if (facebookPage) {
+      console.error("[Facebook] Using existing Facebook tab");
+      page = facebookPage;
+      // Bring the page to front
+      await page.bringToFront();
+    } else if (pages.length === 0) {
+      console.error("[Facebook] Creating new tab for Facebook");
       page = await context.newPage();
     } else {
       page = pages[0];
     }
 
-    // Navigate to Facebook
-    console.error("[Facebook] Navigating to Facebook...");
-    await page.goto(FACEBOOK_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForTimeout(63206);
+    // Navigate to Facebook feed (only if not already on Facebook)
+    if (!page.url().includes('facebook.com')) {
+      console.error("[Facebook] Navigating to Facebook...");
+      await page.goto(FACEBOOK_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    }
+    await page.waitForTimeout(3000);
 
-    // Check login status
+    // Check login status - simplified: if we're on Facebook and not on login page, we're good
     console.error("[Facebook] Checking login status...");
-    const loggedIn = await page.evaluate(() => {
-      const indicators = [
-        '.global-nav__me',
-        '[data-control-name="identity_watcher_profile_photo"]',
-        '.profile-rail-card__actor-link',
-      ];
-      return indicators.some(selector => document.querySelector(selector));
-    });
+    const currentUrl = page.url();
 
-    if (!loggedIn) {
+    if (currentUrl.includes('/login') || currentUrl.includes('login.php')) {
+      console.error("[Facebook] Detected login page, URL:", currentUrl);
       throw new Error("Not logged in to Facebook. Please log in via the Chrome automation window.");
+    }
+
+    // If we're on a Facebook page that's not the login page, assume we're logged in
+    if (currentUrl.includes('facebook.com')) {
+      console.error("[Facebook] ✓ Logged in detected (on Facebook page)");
+    } else {
+      throw new Error("Not on Facebook. Please navigate to Facebook in the Chrome automation window.");
     }
 
     // Navigate to create post

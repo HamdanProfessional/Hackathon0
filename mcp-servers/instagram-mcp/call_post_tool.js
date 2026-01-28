@@ -52,37 +52,50 @@ async function postToInstagram(content) {
     // Use the first available context from the connected browser
     // This ensures we use your existing profile
     const contexts = browser.contexts();
-    if (\!contexts || contexts.length === 0) {
+    if (!contexts || contexts.length === 0) {
       throw new Error('No browser contexts found. Is your main Chrome running with CDP?');
     }
     context = contexts[0];
 
-    // Get or create page
+    // Find or create Instagram page
     const pages = context.pages();
-    if (pages.length === 0) {
+
+    // Look for existing Instagram page
+    const instagramPage = pages.find(p => p.url().includes('instagram.com'));
+
+    if (instagramPage) {
+      console.error("[Instagram] Using existing Instagram tab");
+      page = instagramPage;
+      // Bring the page to front
+      await page.bringToFront();
+    } else if (pages.length === 0) {
+      console.error("[Instagram] Creating new tab for Instagram");
       page = await context.newPage();
     } else {
       page = pages[0];
     }
 
-    // Navigate to Instagram
-    console.error("[Instagram] Navigating to Instagram...");
-    await page.goto(INSTAGRAM_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await page.waitForTimeout(2200);
+    // Navigate to Instagram feed (only if not already on Instagram)
+    if (!page.url().includes('instagram.com')) {
+      console.error("[Instagram] Navigating to Instagram...");
+      await page.goto(INSTAGRAM_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    }
+    await page.waitForTimeout(3000);
 
-    // Check login status
+    // Check login status - simplified: if we're on Instagram and not on login page, we're good
     console.error("[Instagram] Checking login status...");
-    const loggedIn = await page.evaluate(() => {
-      const indicators = [
-        '.global-nav__me',
-        '[data-control-name="identity_watcher_profile_photo"]',
-        '.profile-rail-card__actor-link',
-      ];
-      return indicators.some(selector => document.querySelector(selector));
-    });
+    const currentUrl = page.url();
 
-    if (!loggedIn) {
+    if (currentUrl.includes('/login') || currentUrl.includes('accounts/login')) {
+      console.error("[Instagram] Detected login page, URL:", currentUrl);
       throw new Error("Not logged in to Instagram. Please log in via the Chrome automation window.");
+    }
+
+    // If we're on an Instagram page that's not the login page, assume we're logged in
+    if (currentUrl.includes('instagram.com')) {
+      console.error("[Instagram] ✓ Logged in detected (on Instagram page)");
+    } else {
+      throw new Error("Not on Instagram. Please navigate to Instagram in the Chrome automation window.");
     }
 
     // Navigate to create post
