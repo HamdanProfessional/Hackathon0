@@ -22,6 +22,15 @@ try:
 except ImportError:
     A2A_AVAILABLE = False
 
+# Claim Manager imports (Platinum Tier)
+try:
+    from watchers.claim_manager import CloudClaimManager, LocalClaimManager
+    CLAIM_MANAGER_AVAILABLE = True
+except ImportError:
+    CLAIM_MANAGER_AVAILABLE = False
+
+import os
+
 
 def setup_logging(name: str) -> logging.Logger:
     """Set up logging for a watcher."""
@@ -93,14 +102,92 @@ class BaseWatcher(ABC):
         self._a2a_registry: Optional[AgentRegistry] = None
         self._a2a_heartbeat: Optional[HeartbeatSender] = None
 
+        # Claim Manager for Platinum Tier work-zone specialization
+        self.claim_manager: Optional[Any] = None
+        self.enable_claim_manager = CLAIM_MANAGER_AVAILABLE
+
         # Initialize A2A if enabled
         if self.enable_a2a:
             self._init_a2a()
+
+        # Initialize Claim Manager if available
+        if self.enable_claim_manager:
+            self._init_claim_manager()
 
     def _ensure_folders(self) -> None:
         """Ensure required folders exist."""
         self.needs_action.mkdir(parents=True, exist_ok=True)
         self.logs_path.mkdir(parents=True, exist_ok=True)
+
+    # ========================================================================
+    # Claim Manager Methods (Platinum Tier)
+    # ========================================================================
+
+    def _init_claim_manager(self) -> None:
+        """
+        Initialize the Claim Manager for work-zone specialization.
+
+        Uses CloudClaimManager if CLOUD_MODE=true, otherwise LocalClaimManager.
+        """
+        try:
+            # Check if running in Cloud mode
+            cloud_mode = os.getenv('CLOUD_MODE', 'false').lower() == 'true'
+
+            if cloud_mode:
+                self.claim_manager = CloudClaimManager(str(self.vault_path))
+                self.logger.info("Claim Manager initialized: Cloud mode")
+            else:
+                self.claim_manager = LocalClaimManager(str(self.vault_path))
+                self.logger.info("Claim Manager initialized: Local mode")
+
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize Claim Manager: {e}")
+            self.enable_claim_manager = False
+
+    def _claim_item(self, item_path: Path) -> bool:
+        """
+        Try to claim an item for processing.
+
+        Args:
+            item_path: Path to the item to claim
+
+        Returns:
+            True if claim successful, False if already claimed by another agent
+        """
+        if not self.enable_claim_manager or not self.claim_manager:
+            # No claim manager, assume claim successful
+            return True
+
+        try:
+            claimed = self.claim_manager.claim_item(item_path)
+            if claimed:
+                self.logger.info(f"Claimed item: {item_path.name}")
+            else:
+                self.logger.info(f"Item already claimed: {item_path.name}")
+            return claimed
+        except Exception as e:
+            self.logger.error(f"Failed to claim item: {e}")
+            # On error, allow processing (fail open)
+            return True
+
+    def _release_item_to_pending(self, item_path: Path) -> Optional[Path]:
+        """
+        Release a claimed item to Pending_Approval.
+
+        Args:
+            item_path: Path to the claimed item
+
+        Returns:
+            Path to item in Pending_Approval, or None if claim manager disabled
+        """
+        if not self.enable_claim_manager or not self.claim_manager:
+            return None
+
+        try:
+            return self.claim_manager.release_to_pending(item_path)
+        except Exception as e:
+            self.logger.error(f"Failed to release item: {e}")
+            return None
 
     # ========================================================================
     # A2A Messaging Methods

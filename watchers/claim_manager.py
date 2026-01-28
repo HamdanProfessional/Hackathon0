@@ -214,7 +214,8 @@ class CloudClaimManager(ClaimManager):
     """
 
     def __init__(self, vault_path: str):
-        super().__init__(vault_path, "cloud-agent")
+        # Use "cloud" to match domain folder structure In_Progress/cloud/
+        super().__init__(vault_path, "cloud")
 
     def create_draft_reply(self, original_item: Path, draft_content: str) -> Path:
         """
@@ -253,7 +254,8 @@ class LocalClaimManager(ClaimManager):
     """
 
     def __init__(self, vault_path: str):
-        super().__init__(vault_path, "local-agent")
+        # Use "local" to match domain folder structure In_Progress/local/
+        super().__init__(vault_path, "local")
 
     def execute_approved_action(self, item_path: Path) -> bool:
         """
@@ -292,13 +294,13 @@ if __name__ == "__main__":
     # List claimed items
     if args.list:
         claimed = manager.list_claimed_items()
-        print(f"Items claimed by {args.agent}-agent:")
+        print(f"Items claimed by {args.agent}:")
         for item in claimed:
             print(f"  - {item.name}")
 
     # List available items
     if args.available:
         available = manager.list_available_items()
-        print(f"Items available for {args.agent}-agent:")
+        print(f"Items available for {args.agent}:")
         for item in available:
             print(f"  - {item.name}")
