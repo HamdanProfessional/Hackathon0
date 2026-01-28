@@ -93,7 +93,7 @@ module.exports = {
     {
       name: 'odoo-watcher',
       script: path.join(PROJECT_ROOT, 'venv', 'bin', 'python'),
-      args: '-m watchers.odoo_watcher --vault ' + VAULT_PATH,
+      args: '-m watchers.odoo_watcher --vault ' + VAULT_PATH + ' --odoo-url http://localhost:8069 --odoo-db odoo --odoo-username admin --odoo-password admin',
       cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
