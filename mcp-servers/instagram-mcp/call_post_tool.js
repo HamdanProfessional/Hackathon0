@@ -19,7 +19,6 @@ const __dirname = dirname(__filename);
 
 // Configuration
 const INSTAGRAM_URL = "https://www.instagram.com/feed/";
-const INSTAGRAM_CREATE_POST_URL = "https://www.instagram.com/in/hamdan-mohammad-922486374/overlay/create-post/";
 const CDP_ENDPOINT = "http://127.0.0.1:9222";
 
 // DRY_RUN mode
@@ -98,14 +97,25 @@ async function postToInstagram(content) {
       throw new Error("Not on Instagram. Please navigate to Instagram in the Chrome automation window.");
     }
 
-    // Navigate to create post
-    console.error("[Instagram] Opening create post overlay...");
-    await page.goto(INSTAGRAM_CREATE_POST_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    // Navigate to create post - click on the "New post" button
+    console.error("[Instagram] Looking for 'New post' button...");
     await page.waitForTimeout(2000);
+
+    // First, click the "New post" button if it exists (Instagram requires this)
+    try {
+      const newPostButton = await page.$('[aria-label="New post"], svg[aria-label="New post"]');
+      if (newPostButton) {
+        console.error("[Instagram] Clicking 'New post' button...");
+        await newPostButton.click();
+        await page.waitForTimeout(3000);
+      }
+    } catch {
+      console.error("[Instagram] 'New post' button not found, might already be open...");
+    }
 
     // Wait for content editor
     try {
-      await page.waitForSelector('div[contenteditable="true"]', { timeout: 10000 });
+      await page.waitForSelector('div[contenteditable="true"], [aria-label*="Write a caption"], textarea', { timeout: 15000 });
       console.error("[Instagram] Create post modal loaded");
     } catch {
       console.error("[Instagram] Warning: Modal might not be fully loaded, trying anyway...");
@@ -115,11 +125,11 @@ async function postToInstagram(content) {
     console.error("[Instagram] Typing post content...");
 
     const contentSelectors = [
-      'div[contenteditable="true"][role="textbox"]',
-      '.ql-editor',
-      '[data-artdeco-is="focused"]',
-      'div[role="textbox"]',
-      '[contenteditable="true"]'
+      'div[contenteditable="true"]', // Instagram uses contenteditable divs
+      '[aria-label*="Caption"]',  // Instagram uses aria-label for caption
+      'textarea[placeholder*="caption"]',  // Textarea with caption placeholder
+      'textarea[placeholder*="Write"]',  // Textarea with write placeholder
+      'div[role="presentation"] div[contenteditable="true"]', // Nested structure
     ];
 
     let typed = false;

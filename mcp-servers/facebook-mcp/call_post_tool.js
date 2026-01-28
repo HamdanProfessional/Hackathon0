@@ -19,7 +19,6 @@ const __dirname = dirname(__filename);
 
 // Configuration
 const FACEBOOK_URL = "https://www.facebook.com/feed/";
-const FACEBOOK_CREATE_POST_URL = "https://www.facebook.com/in/hamdan-mohammad-922486374/overlay/create-post/";
 const CDP_ENDPOINT = "http://127.0.0.1:9222";
 
 // DRY_RUN mode
@@ -98,14 +97,25 @@ async function postToFacebook(content) {
       throw new Error("Not on Facebook. Please navigate to Facebook in the Chrome automation window.");
     }
 
-    // Navigate to create post
-    console.error("[Facebook] Opening create post overlay...");
-    await page.goto(FACEBOOK_CREATE_POST_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+    // Navigate to create post - click on the input area directly
+    console.error("[Facebook] Looking for create post input...");
     await page.waitForTimeout(2000);
+
+    // Click on the "What's on your mind" input to open the composer
+    try {
+      const composeButton = await page.$('[role="button"]:has-text("What\'s on your mind"), [role="button"].xi81zsa');
+      if (composeButton) {
+        console.error("[Facebook] Clicking compose button...");
+        await composeButton.click();
+        await page.waitForTimeout(2000);
+      }
+    } catch {
+      console.error("[Facebook] Could not find compose button, trying direct fill...");
+    }
 
     // Wait for content editor
     try {
-      await page.waitForSelector('div[contenteditable="true"]', { timeout: 10000 });
+      await page.waitForSelector('[role="button"]:has-text("What\'s on your mind"), div[contenteditable="true"]', { timeout: 10000 });
       console.error("[Facebook] Create post modal loaded");
     } catch {
       console.error("[Facebook] Warning: Modal might not be fully loaded, trying anyway...");
@@ -115,11 +125,10 @@ async function postToFacebook(content) {
     console.error("[Facebook] Typing post content...");
 
     const contentSelectors = [
-      'div[contenteditable="true"][role="textbox"]',
-      '.ql-editor',
-      '[data-artdeco-is="focused"]',
-      'div[role="textbox"]',
-      '[contenteditable="true"]'
+      'div[contenteditable="true"]', // Facebook's contenteditable div in composer
+      '[role="textbox"]',
+      '[role="button"]:has(span:has-text("What\'s on your mind"))', // Click to focus
+      'span.x1lliihq:has-text("What\'s on your mind")',
     ];
 
     let typed = false;
