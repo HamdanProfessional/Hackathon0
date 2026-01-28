@@ -113,23 +113,92 @@ async function postToInstagram(content) {
       console.error("[Instagram] 'New post' button not found, might already be open...");
     }
 
-    // Wait for content editor
-    try {
-      await page.waitForSelector('div[contenteditable="true"], [aria-label*="Write a caption"], textarea', { timeout: 15000 });
-      console.error("[Instagram] Create post modal loaded");
-    } catch {
-      console.error("[Instagram] Warning: Modal might not be fully loaded, trying anyway...");
+    // Wait for the Instagram post modal to fully load
+    console.error("[Instagram] Waiting for post modal to load...");
+    await page.waitForTimeout(5000); // Give Instagram more time to load the modal
+
+    // Instagram requires: Select Image → Crop → Caption → Share
+    // Step 1: Check if we need to upload/select an image
+    console.error("[Instagram] Checking for image upload step...");
+
+    const uploadScreenSelectors = [
+      'button:has-text("Select From Computer")',  // English
+      'h3:has-text("Drag photos and videos here")',  // Drag drop area
+    ];
+
+    let needsImageUpload = false;
+    for (const selector of uploadScreenSelectors) {
+      try {
+        if (await page.isVisible(selector, { timeout: 5000 })) {
+          needsImageUpload = true;
+          console.error("[Instagram] Image upload screen detected");
+          break;
+        }
+      } catch {
+        continue;
+      }
     }
 
-    // Type content
-    console.error("[Instagram] Typing post content...");
+    if (needsImageUpload) {
+      console.error("[Instagram] Skipping image selection for now (requires manual upload or auto-generated image)");
+      // Try to click "Next" to proceed if possible
+      try {
+        const nextButton = await page.$('div[role="button"]:has-text("Next")');
+        if (nextButton) {
+          console.error("[Instagram] Clicking Next button...");
+          await nextButton.click();
+          await page.waitForTimeout(2000);
+        }
+      } catch {
+        // Ignore if Next button not found
+      }
+    }
+
+    // Step 2: Look for "Next" button (crop screen) or caption area
+    console.error("[Instagram] Looking for caption area or Next button...");
+
+    const cropOrCaptionSelectors = [
+      'div[role="button"]:has-text("Next")',  // Crop screen Next button
+      'textarea[placeholder*="Caption"]',  // Caption textarea
+      'textarea[aria-label*="Caption"]',  // Aria-label Caption
+    ];
+
+    let foundNextOrCaption = false;
+    for (const selector of cropOrCaptionSelectors) {
+      try {
+        const element = await page.$(selector);
+        if (element) {
+          console.error("[Instagram] Found:", selector);
+          foundNextOrCaption = true;
+          // If it's a Next button (crop screen), click it
+          if (selector.includes('Next') && !selector.includes('Caption')) {
+            await element.click();
+            console.error("[Instagram] Clicked Next (crop screen)");
+            await page.waitForTimeout(2000);
+          }
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    // Step 3: Wait for content editor (caption area)
+    try {
+      await page.waitForSelector('textarea[placeholder*="Caption"], textarea[aria-label*="Caption"], div[contenteditable="true"]', { timeout: 10000 });
+      console.error("[Instagram] Caption area loaded");
+    } catch {
+      console.error("[Instagram] Warning: Caption area not found, might need manual interaction");
+    }
+
+    // Type content (caption)
+    console.error("[Instagram] Typing caption...");
 
     const contentSelectors = [
-      'div[contenteditable="true"]', // Instagram uses contenteditable divs
-      '[aria-label*="Caption"]',  // Instagram uses aria-label for caption
-      'textarea[placeholder*="caption"]',  // Textarea with caption placeholder
-      'textarea[placeholder*="Write"]',  // Textarea with write placeholder
-      'div[role="presentation"] div[contenteditable="true"]', // Nested structure
+      'textarea[placeholder*="Caption"]',  // Instagram's caption textarea
+      'textarea[aria-label*="Write a caption"]',  // Aria-label based
+      'textarea[aria-label*="Add a caption"]',  // Alternative aria-label
+      'div[contenteditable="true"]',  // Contenteditable div (fallback)
     ];
 
     let typed = false;
@@ -150,24 +219,27 @@ async function postToInstagram(content) {
       throw new Error("Could not find content editor to type post");
     }
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
-    // Click Post button (or skip if dry run)
+    // Click Share button (or skip if dry run)
     if (!DRY_RUN) {
-      console.error("[Instagram] Clicking 'Post' button...");
+      console.error("[Instagram] Clicking 'Share' button...");
 
       const postButtonSelectors = [
-        'button.share-actions__primary-action:not(.share-actions__scheduled-post-btn):has(span:has-text("Post"))',
-        'button.share-actions__primary-action.artdeco-button--primary:not(.artdeco-button--tertiary):has(span:has-text("Post"))',
+        'div[role="button"]:has-text("Share")', // Based on HTML provided
+        'div.x1i10hfl:has-text("Share")',  // Alternative with specific class
+        '[aria-label="Share"][role="button"]', // Aria-label based
+        'button:has-text("Share")',  // Fallback
       ];
 
       let posted = false;
       for (const selector of postButtonSelectors) {
         try {
-          if (await page.isVisible(selector, { timeout: 2200 })) {
-            await page.click(selector);
+          const element = await page.$(selector);
+          if (element) {
+            await element.click();
             posted = true;
-            console.error("[Instagram] Post button clicked");
+            console.error("[Instagram] Share button clicked via:", selector);
             break;
           }
         } catch {
@@ -176,13 +248,13 @@ async function postToInstagram(content) {
       }
 
       if (!posted) {
-        // Try via role
+        // Try via Playwright's getByRole as last resort
         try {
-          await page.getByRole("button", { name: "Post" }).click({ timeout: 5000 });
+          await page.getByRole("button", { name: "Share" }).click({ timeout: 5000 });
           posted = true;
           console.error("[Instagram] Clicked via role/name");
         } catch {
-          throw new Error("Could not find or click 'Post' button");
+          throw new Error("Could not find or click 'Share' button");
         }
       }
 

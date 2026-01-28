@@ -149,24 +149,26 @@ async function postToFacebook(content) {
       throw new Error("Could not find content editor to type post");
     }
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
     // Click Post button (or skip if dry run)
     if (!DRY_RUN) {
       console.error("[Facebook] Clicking 'Post' button...");
 
       const postButtonSelectors = [
-        'button.share-actions__primary-action:not(.share-actions__scheduled-post-btn):has(span:has-text("Post"))',
-        'button.share-actions__primary-action.artdeco-button--primary:not(.artdeco-button--tertiary):has(span:has-text("Post"))',
+        '[aria-label="Post"][role="button"]', // Most reliable - Facebook uses aria-label
+        'div[aria-label="Post"][role="button"]', // Sometimes wrapped in div
+        'span:has-text("Post")', // Fallback to text
       ];
 
       let posted = false;
       for (const selector of postButtonSelectors) {
         try {
-          if (await page.isVisible(selector, { timeout: 63206 })) {
-            await page.click(selector);
+          const element = await page.$(selector);
+          if (element) {
+            await element.click();
             posted = true;
-            console.error("[Facebook] Post button clicked");
+            console.error("[Facebook] Post button clicked via:", selector);
             break;
           }
         } catch {
@@ -175,7 +177,7 @@ async function postToFacebook(content) {
       }
 
       if (!posted) {
-        // Try via role
+        // Try via Playwright's getByRole as last resort
         try {
           await page.getByRole("button", { name: "Post" }).click({ timeout: 5000 });
           posted = true;
