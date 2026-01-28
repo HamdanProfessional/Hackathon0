@@ -850,10 +850,9 @@ async function getDetectedProcesses() {
 
   return new Promise((resolve) => {
     // Use tasklist to find Python processes
-    // shell: true is safe here for hardcoded command (no user input)
     const child = spawn('tasklist', ['/FI', 'IMAGENAME eq python.exe', '/FO', 'CSV'], {
       windowsHide: true,
-      shell: true
+      shell: false  // Fixed deprecation warning - no shell needed for array args
     });
 
     let stdout = '';

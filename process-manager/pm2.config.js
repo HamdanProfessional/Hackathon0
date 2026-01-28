@@ -37,10 +37,11 @@ module.exports = {
       args: "--vault " + VAULT_PATH + " --credentials " + path.join(PROJECT_ROOT, "mcp-servers", "calendar-mcp", "credentials.json"),
       interpreter: "python",
       exec_mode: "fork",
-      autorestart: true,
+      autorestart: false,
       watch: false,
       max_restarts: 10,
       max_memory_restart: "500M",
+      instances: 0,
       env: {
         "PYTHONUNBUFFERED": "1",
         "PYTHONIOENCODING": "utf-8"

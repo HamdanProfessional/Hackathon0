@@ -22,6 +22,10 @@ if ! git config user.name >/dev/null 2>&1; then
     git config user.email "cloud@aitemployee.local"
 fi
 
+# Configure git to use rebase for pulls (handles diverged branches)
+git config pull.rebase true 2>/dev/null || true
+git config rebase.autoStash true 2>/dev/null || true
+
 # Fetch first to check for remote changes
 echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Fetching remote changes..."
 git fetch origin main || echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Warning: Fetch failed, continuing..."
@@ -33,8 +37,16 @@ BASE=$(git merge-base HEAD origin/main 2>/dev/null || echo "$LOCAL")
 
 if [ "$LOCAL" != "$REMOTE" ] && [ "$LOCAL" != "$BASE" ]; then
     echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] WARNING: Local and remote have diverged!"
-    echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Pulling remote changes first..."
-    git pull origin main --no-edit || echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Warning: Pull failed, continuing..."
+    echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Rebasing local changes on top of remote..."
+    if git rebase origin/main 2>&1; then
+        echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Rebase successful"
+    else
+        echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] WARNING: Rebase failed, aborting..."
+        git rebase --abort 2>/dev/null || true
+        echo "[$(date -u +'%Y-%m-%d %H:%M:%S UTC')] Resetting to origin/main and stashing local changes..."
+        git stash push -m "auto-stash-$(date +%s)" 2>/dev/null || true
+        git reset --hard origin/main
+    fi
 fi
 
 # Stage all changes
