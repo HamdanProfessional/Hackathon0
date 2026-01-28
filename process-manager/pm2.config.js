@@ -394,6 +394,26 @@ module.exports = {
       }
     },
 
+    // ==================== CROSS-DOMAIN COORDINATOR ====================
+    // Coordinates actions across multiple domains from a single request
+    // Example: Send email + WhatsApp message about the email
+    {
+      name: "cross-domain-coordinator",
+      script: path.join(PROJECT_ROOT, "scripts", "cross_domain_coordinator.py"),
+      args: "--vault " + VAULT_PATH,
+      interpreter: "python",
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      max_restarts: 10,
+      max_memory_restart: "500M",
+      env: {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONPATH": PROJECT_ROOT
+      }
+    },
+
     // ==================== DASHBOARD ====================
     {
       name: "ai-employee-dashboard",
