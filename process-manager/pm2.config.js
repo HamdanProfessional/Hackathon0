@@ -356,6 +356,26 @@ module.exports = {
       }
     },
 
+    // ==================== AI EMPLOYEE ORCHESTRATOR ====================
+    // The orchestrator monitors Needs_Action/ and invokes Claude Code
+    // Note: Run manually when needed (don't auto-start due to memory constraints)
+    {
+      name: "ai-employee-orchestrator",
+      script: path.join(PROJECT_ROOT, "scripts", "ai_employee_orchestrator.py"),
+      args: "--vault " + VAULT_PATH + " --interval 300",
+      interpreter: "python",
+      exec_mode: "fork",
+      autorestart: false,
+      watch: false,
+      max_restarts: 3,
+      instances: 0,  // Disabled by default - run manually when needed
+      env: {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONPATH": PROJECT_ROOT
+      }
+    },
+
     // ==================== DASHBOARD ====================
     {
       name: "ai-employee-dashboard",
