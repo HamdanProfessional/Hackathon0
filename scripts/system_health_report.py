@@ -7,6 +7,8 @@ including Cloud VM status, Local status, git sync status, and recommendations.
 """
 import argparse
 import json
+import platform
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -29,6 +31,10 @@ class HealthReportGenerator:
 
     def run_command(self, cmd: List[str], ssh: bool = False) -> str:
         """Run a command locally or via SSH."""
+        # On Windows, pm2 is actually pm2.cmd
+        if not ssh and platform.system() == "Windows" and cmd[0] == "pm2":
+            cmd = ["pm2.cmd"] + cmd[1:]
+
         if ssh:
             cmd = ["ssh", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=no",
                     "root@143.244.143.143"] + [" ".join(cmd)]
@@ -42,29 +48,104 @@ class HealthReportGenerator:
         except Exception as e:
             return f"Error: {e}"
 
+    def _strip_ansi_codes(self, text: str) -> str:
+        """Remove ANSI color codes from text."""
+        ansi_escape = re.compile(r'\x1b\[[0-9;]*m|\033\[[0-9;]*m|\[1m|\[36m|\[39m|\[22m|\[27m|\[7m|\[31m|\[32m|\[90m')
+        return ansi_escape.sub('', text)
+
     def parse_pm2_status(self, output: str) -> Dict[str, Any]:
-        """Parse PM2 status output into structured data."""
+        """Parse PM2 status text output into structured data.
+
+        PM2 status table structure (after splitting by │):
+        [0]: empty (before first │)
+        [1]: id
+        [2]: name
+        [3]: namespace
+        [4]: version
+        [5]: mode
+        [6]: pid
+        [7]: uptime
+        [8]: restarts (↺)
+        [9]: status
+        [10]: cpu
+        [11]: memory
+        ...
+        """
         processes = {}
         for line in output.split('\n'):
-            if '│' in line and 'online' in line:
-                parts = [p.strip() for p in line.split('│')]
-                if len(parts) >= 9:
-                    name = parts[1].replace('│', '').strip()
-                    restarts = parts[7].replace('│', '').strip()
-                    memory = parts[9].replace('│', '').strip()
-                    status = parts[8].replace('│', '').strip()
-                    processes[name] = {
-                        "restarts": int(restarts) if restarts.isdigit() else restarts,
-                        "memory": memory,
-                        "status": status
-                    }
+            # Remove ANSI color codes that interfere with parsing
+            line = self._strip_ansi_codes(line)
+
+            # Look for lines with process status (│ character and "online"/"stopped")
+            if "│" in line and ("online" in line.lower() or "stopped" in line.lower()):
+                # Extract process columns
+                parts = line.split('│')
+
+                if len(parts) >= 12:
+                    # Extract columns based on actual table structure
+                    # parts[1] = ID, parts[2] = Name, etc.
+                    try:
+                        proc_id = parts[1].strip()
+                        name = parts[2].strip()
+
+                        # Skip header rows
+                        if not name or name.lower() in ("name", "namespace", "────", "id"):
+                            continue
+
+                        # Find status (column 9)
+                        status = "unknown"
+                        if len(parts) > 9:
+                            status_col = parts[9].strip().lower()
+                            if "online" in status_col:
+                                status = "online"
+                            elif "stopped" in status_col or "errored" in status_col:
+                                status = "stopped"
+                            elif "launching" in status_col:
+                                status = "launching"
+
+                        # Extract restart count (column 8, has ↺ symbol)
+                        restarts = 0
+                        if len(parts) > 8:
+                            restart_str = parts[8].strip().replace("↺", "").replace("━", "").strip()
+                            try:
+                                restarts = int(restart_str) if restart_str.isdigit() else 0
+                            except ValueError:
+                                restarts = 0
+
+                        # Extract memory (column 11)
+                        memory = "N/A"
+                        if len(parts) > 11:
+                            mem_col = parts[11].strip().lower()
+                            if "mb" in mem_col:
+                                # Extract the memory value (e.g., "11.6mb" -> "11.6mb")
+                                mem_match = re.search(r'([\d.]+)\s*([a-z]+)', mem_col)
+                                if mem_match:
+                                    memory = f"{mem_match.group(1)}{mem_match.group(2)}"
+                            elif "gb" in mem_col:
+                                mem_match = re.search(r'([\d.]+)\s*([a-z]+)', mem_col)
+                                if mem_match:
+                                    memory = f"{mem_match.group(1)}{mem_match.group(2)}"
+                            elif "b" in mem_col:  # bytes
+                                memory = mem_col
+
+                        # Add to processes dictionary
+                        if name and name != "id":
+                            processes[name] = {
+                                "restarts": restarts,
+                                "memory": memory,
+                                "status": status
+                            }
+                    except (IndexError, ValueError) as e:
+                        # Skip lines that don't parse correctly
+                        continue
+
         return processes
 
     def check_cloud(self) -> None:
         """Check Cloud VM health."""
         print("Checking Cloud VM...")
 
-        # PM2 status
+        # PM2 status (text format for parsing)
         pm2_output = self.run_command(["pm2", "status"], ssh=True)
         if pm2_output and not pm2_output.startswith("Error"):
             self.report["cloud"]["pm2"] = self.parse_pm2_status(pm2_output)
@@ -92,7 +173,7 @@ class HealthReportGenerator:
         """Check Local machine health."""
         print("Checking Local machine...")
 
-        # PM2 status
+        # PM2 status (text format for parsing)
         pm2_output = self.run_command(["pm2", "status"], ssh=False)
         if pm2_output and not pm2_output.startswith("Error"):
             self.report["local"]["pm2"] = self.parse_pm2_status(pm2_output)
