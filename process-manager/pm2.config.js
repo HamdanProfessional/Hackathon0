@@ -233,6 +233,23 @@ module.exports = {
       }
     },
 
+    {
+      name: "whatsapp-approval-monitor",
+      script: path.join(PROJECT_ROOT, ".claude", "skills", "whatsapp-manager", "scripts", "whatsapp_approval_monitor.py"),
+      args: "--vault " + VAULT_PATH,
+      interpreter: "python",
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      max_restarts: 10,
+      max_memory_restart: "500M",
+      env: {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONIOENCODING": "utf-8",
+        "WHATSAPP_DRY_RUN": "false"
+      }
+    },
+
     // ==================== AUTO-APPROVER ====================
     {
       name: "auto-approver",
@@ -356,23 +373,24 @@ module.exports = {
       }
     },
 
-    // ==================== AI EMPLOYEE ORCHESTRATOR ====================
-    // The orchestrator monitors Needs_Action/ and invokes Claude Code
-    // Note: Run manually when needed (don't auto-start due to memory constraints)
+    // ==================== AI ITEM PROCESSOR ====================
+    // Processes items from Needs_Action/ using Claude API (AI-driven decisions)
+    // This transforms the system from "automation" to "AI Employee"
     {
-      name: "ai-employee-orchestrator",
-      script: path.join(PROJECT_ROOT, "scripts", "ai_employee_orchestrator.py"),
-      args: "--vault " + VAULT_PATH + " --interval 300",
+      name: "ai-item-processor",
+      script: path.join(PROJECT_ROOT, "scripts", "ai_item_processor.py"),
+      args: "--vault " + VAULT_PATH,
       interpreter: "python",
       exec_mode: "fork",
-      autorestart: false,
+      autorestart: true,
       watch: false,
-      max_restarts: 3,
-      instances: 0,  // Disabled by default - run manually when needed
+      max_restarts: 10,
+      max_memory_restart: "500M",
       env: {
         "PYTHONUNBUFFERED": "1",
         "PYTHONIOENCODING": "utf-8",
-        "PYTHONPATH": PROJECT_ROOT
+        "PYTHONPATH": PROJECT_ROOT,
+        "ANTHROPIC_API_KEY": process.env.ANTHROPIC_API_KEY || ""
       }
     },
 

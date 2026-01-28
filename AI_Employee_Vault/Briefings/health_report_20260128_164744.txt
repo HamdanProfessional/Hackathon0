@@ -1,0 +1,59 @@
+======================================================================
+AI EMPLOYEE SYSTEM HEALTH REPORT
+Generated: 2026-01-28T16:47:41.092274
+======================================================================
+
+[CLOUD] CLOUD VM (143.244.143.143)
+----------------------------------------------------------------------
+Processes: 5/7 online
+High restarts: 0
+
+Process Details:
+  [OK] auto-approver             |          0 restarts |   28.2mb
+  [STOPPED] calendar-watcher          |          0 restarts |       0b
+  [OK] cloud-health-monitor      |          0 restarts |   15.9mb
+  [STOPPED] git-sync-push             |          0 restarts |       0b
+  [OK] gmail-watcher             |          0 restarts |   50.7mb
+  [OK] odoo-watcher              |          1 restarts |   20.6mb
+  [OK] slack-watcher             |          1 restarts |   28.8mb
+
+[LOCAL] LOCAL MACHINE
+----------------------------------------------------------------------
+Processes: 15/21 online
+High restarts: 0
+
+Process Details:
+  [OK] a2a-message-broker        |          1 restarts |   21.2mb
+  [OK] ai-employee-dashboard     |          2 restarts |   63.5mb
+  [STOPPED] audit-log-cleanup         |          0 restarts |       0b
+  [OK] auto-approver             |          1 restarts |   30.0mb
+  [OK] calendar-approval-monitor |          1 restarts |   16.8mb
+  [STOPPED] calendar-watcher          |          0 restarts |       0b
+  [STOPPED] daily-review              |          0 restarts |       0b
+  [OK] email-approval-monitor    |          1 restarts |   30.1mb
+  [OK] facebook-approval-monitor |          1 restarts |   16.7mb
+  [OK] filesystem-watcher        |          1 restarts |   22.3mb
+  [OK] gmail-watcher             |          1 restarts |   55.4mb
+  [OK] instagram-approval-monitor |          1 restarts |   16.3mb
+  [OK] linkedin-approval-monitor |          1 restarts |   17.6mb
+  [STOPPED] monday-ceo-briefing       |          0 restarts |       0b
+  [OK] odoo-watcher              |          1 restarts |   25.1mb
+  [STOPPED] research-processor        |          0 restarts |       0b
+  [OK] slack-approval-monitor    |          1 restarts |   18.9mb
+  [OK] slack-watcher             |          1 restarts |   36.5mb
+  [STOPPED] social-media-scheduler    |          0 restarts |       0b
+  [OK] twitter-approval-monitor  |          1 restarts |   16.7mb
+  [OK] whatsapp-watcher          |          1 restarts |   34.2mb
+
+[GIT] GIT SYNC
+----------------------------------------------------------------------
+Uncommitted changes: 11
+
+Recent commits:
+  4bfd7f4 fix: Correct PM2 status parser for Windows compatibility
+  f4de04e Cloud update: 2026-01-28 11:40:03 UTC
+  bc5f8e4 Cloud update: 2026-01-28 11:35:03 UTC
+
+[OK] No recommendations - System healthy!
+
+======================================================================
