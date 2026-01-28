@@ -82,19 +82,30 @@ async function postToFacebook(content) {
     await page.waitForTimeout(3000);
 
     // Check login status - simplified: if we're on Facebook and not on login page, we're good
-    console.error("[Facebook] Checking login status...");
+    console.error("[Facebook] Checking current location...");
     const currentUrl = page.url();
+    console.error("[Facebook] Current URL:", currentUrl);
 
+    // If we're on the login page, user needs to log in
     if (currentUrl.includes('/login') || currentUrl.includes('login.php')) {
       console.error("[Facebook] Detected login page, URL:", currentUrl);
       throw new Error("Not logged in to Facebook. Please log in via the Chrome automation window.");
     }
 
-    // If we're on a Facebook page that's not the login page, assume we're logged in
-    if (currentUrl.includes('facebook.com')) {
+    // If we're not on Facebook, automatically navigate there
+    if (!currentUrl.includes('facebook.com')) {
+      console.error("[Facebook] Not on Facebook, navigating automatically...");
+      await page.goto('https://www.facebook.com/feed/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForTimeout(3000);
+      console.error("[Facebook] ✓ Navigated to Facebook");
+    }
+
+    // Verify we're now on Facebook
+    const newUrl = page.url();
+    if (newUrl.includes('facebook.com') && !newUrl.includes('/login')) {
       console.error("[Facebook] ✓ Logged in detected (on Facebook page)");
     } else {
-      throw new Error("Not on Facebook. Please navigate to Facebook in the Chrome automation window.");
+      throw new Error("Not logged in to Facebook. Please log in via the Chrome automation window.");
     }
 
     // Navigate to create post - click on the input area directly

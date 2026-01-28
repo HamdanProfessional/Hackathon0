@@ -13,7 +13,10 @@ import { chromium } from "playwright";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import { exec } from "child_process";
+import { promisify } from "util";
 
+const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -25,12 +28,74 @@ const CDP_ENDPOINT = "http://127.0.0.1:9222";
 const DRY_RUN = process.env.INSTAGRAM_DRY_RUN !== "false";
 
 /**
+ * Generate Instagram image from text using Python script
+ */
+async function generateInstagramImage(text) {
+  console.error("[Instagram] Generating professional image from text...");
+
+  // Use absolute paths to avoid backslash issues
+  const projectRoot = process.cwd();
+  const tempImagePath = `${projectRoot}/mcp-servers/instagram-mcp/temp_instagram_image.jpg`;
+  const contentFile = `${projectRoot}/mcp-servers/instagram-mcp/temp_content.txt`;
+  const pythonScript = `${projectRoot}/mcp-servers/instagram-mcp/temp_generate_image.py`;
+  const instagramPosterPath = `${projectRoot}/.claude/skills/facebook-instagram-manager/scripts`;
+
+  try {
+    // Write content to temp file
+    fs.writeFileSync(contentFile, text);
+
+    // Create a simpler Python script using os.path.normpath
+    const pythonCode = `import sys
+import os
+sys.path.insert(0, r"${instagramPosterPath.replace(/\\/g, '\\\\')}")
+from instagram_poster import generate_instagram_image
+
+content = open(r"${contentFile.replace(/\\/g, '\\\\')}", "r").read()
+result = generate_instagram_image(content, r"${tempImagePath.replace(/\\/g, '\\\\')}")
+print(f"Generated: {result}")
+`;
+
+    fs.writeFileSync(pythonScript, pythonCode);
+
+    // Run the Python script
+    const { stdout, stderr } = await execAsync(`python "${pythonScript}"`, {
+      cwd: projectRoot,
+      timeout: 30000
+    });
+
+    console.error("[Instagram] Python output:", stdout || stderr);
+
+    // Clean up temp files
+    try {
+      fs.unlinkSync(pythonScript);
+      fs.unlinkSync(contentFile);
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+
+    if (fs.existsSync(tempImagePath)) {
+      console.error("[Instagram] ✓ Image generated successfully");
+      return tempImagePath;
+    } else {
+      console.error("[Instagram] ⚠️ Image generation failed, continuing without image");
+      return null;
+    }
+  } catch (error) {
+    console.error(`[Instagram] Image generation error: ${error.message}`);
+    return null;
+  }
+}
+
+/**
  * Post to Instagram using Playwright with Chrome CDP
  */
 async function postToInstagram(content) {
   console.error(`[Instagram] Starting post...`);
   console.error(`[Instagram] Content length: ${content.length} chars`);
   console.error(`[Instagram] Dry Run: ${DRY_RUN}`);
+
+  // Generate image from text (Instagram requires an image)
+  const imagePath = await generateInstagramImage(content);
 
   let browser = null;
 
@@ -82,19 +147,30 @@ async function postToInstagram(content) {
     await page.waitForTimeout(3000);
 
     // Check login status - simplified: if we're on Instagram and not on login page, we're good
-    console.error("[Instagram] Checking login status...");
+    console.error("[Instagram] Checking current location...");
     const currentUrl = page.url();
+    console.error("[Instagram] Current URL:", currentUrl);
 
+    // If we're on the login page, user needs to log in
     if (currentUrl.includes('/login') || currentUrl.includes('accounts/login')) {
       console.error("[Instagram] Detected login page, URL:", currentUrl);
       throw new Error("Not logged in to Instagram. Please log in via the Chrome automation window.");
     }
 
-    // If we're on an Instagram page that's not the login page, assume we're logged in
-    if (currentUrl.includes('instagram.com')) {
+    // If we're not on Instagram, automatically navigate there
+    if (!currentUrl.includes('instagram.com')) {
+      console.error("[Instagram] Not on Instagram, navigating automatically...");
+      await page.goto('https://www.instagram.com/feed/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForTimeout(3000);
+      console.error("[Instagram] ✓ Navigated to Instagram");
+    }
+
+    // Verify we're now on Instagram
+    const newUrl = page.url();
+    if (newUrl.includes('instagram.com') && !newUrl.includes('/login')) {
       console.error("[Instagram] ✓ Logged in detected (on Instagram page)");
     } else {
-      throw new Error("Not on Instagram. Please navigate to Instagram in the Chrome automation window.");
+      throw new Error("Not logged in to Instagram. Please log in via the Chrome automation window.");
     }
 
     // Navigate to create post - click on the "New post" button
@@ -140,17 +216,34 @@ async function postToInstagram(content) {
     }
 
     if (needsImageUpload) {
-      console.error("[Instagram] Skipping image selection for now (requires manual upload or auto-generated image)");
-      // Try to click "Next" to proceed if possible
-      try {
-        const nextButton = await page.$('div[role="button"]:has-text("Next")');
-        if (nextButton) {
-          console.error("[Instagram] Clicking Next button...");
-          await nextButton.click();
-          await page.waitForTimeout(2000);
+      // Upload the generated image
+      if (imagePath && fs.existsSync(imagePath)) {
+        console.error("[Instagram] Uploading generated image:", imagePath);
+
+        try {
+          // Find the file input element
+          const fileInput = await page.$('input[type="file"]');
+          if (fileInput) {
+            // Upload the image
+            await fileInput.uploadFile(imagePath);
+            console.error("[Instagram] ✓ Image uploaded successfully");
+            await page.waitForTimeout(3000);
+
+            // Click Next button after upload
+            const nextButton = await page.$('div[role="button"]:has-text("Next")');
+            if (nextButton) {
+              console.error("[Instagram] Clicking Next (after image upload)...");
+              await nextButton.click();
+              await page.waitForTimeout(2000);
+            }
+          } else {
+            console.error("[Instagram] ⚠️ Could not find file input, trying manual flow...");
+          }
+        } catch (uploadError) {
+          console.error("[Instagram] Image upload failed:", uploadError.message);
         }
-      } catch {
-        // Ignore if Next button not found
+      } else {
+        console.error("[Instagram] No generated image available, manual upload required");
       }
     }
 
