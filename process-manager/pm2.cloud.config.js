@@ -143,7 +143,7 @@ module.exports = {
 
     {
       name: 'git-sync-push',
-      script: path.join(PROJECT_ROOT, 'scripts', 'git_sync_push.sh'),
+      script: path.join(PROJECT_ROOT, 'scripts', 'git_sync_push_loop.py'),
       cwd: PROJECT_ROOT,
       instances: 1,
       autorestart: true,
@@ -151,7 +151,7 @@ module.exports = {
       watch: false,
       max_restarts: 10,
       restart_delay: 5000,
-      cron_restart: '*/5 * * * *',
+      interpreter: 'python3',
       env: {
         'PATH': '/usr/local/bin:/usr/bin:/bin:/root/.local/bin'
       },
