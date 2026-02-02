@@ -4,7 +4,7 @@ source: gmail
 message_id: 19bfd8d509d419d9
 thread_id: 19bfd8d509d419d9
 from: foodpanda <contact@info.foodpanda.pk>
-subject: ⌛ Don't miss it: 20% voucher
+subject: "⌛ Don't miss it: 20% voucher"
 received: Tue, 27 Jan 2026 03:44:15 +0000 (UTC)
 urgency: normal
 priority: normal

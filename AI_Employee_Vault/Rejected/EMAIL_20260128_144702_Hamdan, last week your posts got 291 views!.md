@@ -4,7 +4,7 @@ source: gmail
 message_id: 19bfe855eaa6ccd0
 thread_id: 19bfe855eaa6ccd0
 from: LinkedIn <notifications-noreply@linkedin.com>
-subject: Hamdan, last week your posts got 291 views!
+subject: "Hamdan, last week your posts got 291 views!"
 received: Tue, 27 Jan 2026 08:15:09 +0000 (UTC)
 urgency: normal
 priority: normal

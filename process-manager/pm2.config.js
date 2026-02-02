@@ -100,8 +100,8 @@ module.exports = {
 
     {
       name: "whatsapp-watcher",
-      script: path.join(PROJECT_ROOT, ".claude/skills/whatsapp-manager/scripts", "run_whatsapp_watcher.py"),
-      args: "--vault " + VAULT_PATH,
+      script: path.join(PROJECT_ROOT, ".claude", "skills", "whatsapp-manager", "scripts", "run_whatsapp_watcher.py"),
+      args: "--vault " + VAULT_PATH + " --session " + path.join(VAULT_PATH, "whatsapp_session"),
       interpreter: "python",
       exec_mode: "fork",
       autorestart: true,

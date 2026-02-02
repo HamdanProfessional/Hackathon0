@@ -534,9 +534,18 @@ class WhatsAppWatcherPlaywright(BaseWatcher):
                             continue
 
                     # If no messages found with specific selectors, try getting all text from the chat panel
-                    if not messages and chat_content.get('innerText'):
-                        # The chat panel is open but no message containers found
-                        full_text = chat_content.get('innerText', '')
+                    if not messages:
+                        # Try to get the chat panel element
+                        try:
+                            chat_panel = page.query_selector('[data-testid="conversation-panel-messages"]')
+                            if chat_panel:
+                                full_text = chat_panel.inner_text() or ''
+                            else:
+                                # Fallback to main content area
+                                full_text = page.inner_text() or ''
+                        except:
+                            full_text = ''
+
                         if full_text and len(full_text) > 0:
                             logger.info(f"No message containers found, but chat panel has {len(full_text)} characters of text")
                             # Try to extract messages from the full text

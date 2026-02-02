@@ -4,7 +4,7 @@ source: gmail
 message_id: 19bffd0c2a6178a7
 thread_id: 19bffd0c2a6178a7
 from: LinkedIn <notifications-noreply@linkedin.com>
-subject: Job interviews aren’t just about work: Here’s what else matters.
+subject: "Job interviews aren’t just about work: Here’s what else matters."
 received: Tue, 27 Jan 2026 14:17:06 +0000 (UTC)
 urgency: normal
 priority: normal

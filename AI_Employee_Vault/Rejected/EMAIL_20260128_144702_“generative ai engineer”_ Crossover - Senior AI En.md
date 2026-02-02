@@ -4,7 +4,7 @@ source: gmail
 message_id: 19c02b3572108bd0
 thread_id: 19c02b3572108bd0
 from: LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>
-subject: “generative ai engineer”: Crossover - Senior AI Engineer, Trilogy (Remote) - $200,000/year USD and more
+subject: "“generative ai engineer”: Crossover - Senior AI Engineer, Trilogy (Remote) - $200,000/year USD and more"
 received: Wed, 28 Jan 2026 03:43:49 +0000 (UTC)
 urgency: normal
 priority: normal

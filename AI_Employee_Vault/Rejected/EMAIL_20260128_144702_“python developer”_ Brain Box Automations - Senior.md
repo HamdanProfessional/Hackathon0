@@ -4,7 +4,7 @@ source: gmail
 message_id: 19bfd8e053cea786
 thread_id: 19bfd8e053cea786
 from: LinkedIn Job Alerts <jobalerts-noreply@linkedin.com>
-subject: “python developer”: Brain Box Automations - Senior AI Engineer - Remote and more
+subject: "“python developer”: Brain Box Automations - Senior AI Engineer - Remote and more"
 received: Tue, 27 Jan 2026 03:44:59 +0000 (UTC)
 urgency: normal
 priority: normal

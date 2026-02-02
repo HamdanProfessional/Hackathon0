@@ -324,12 +324,15 @@ async function postToInstagram(content) {
       console.error("[Instagram] Clicking 'Share' button...");
 
       // Wait a bit longer for Instagram to enable the Share button
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(2000);
 
       const postButtonSelectors = [
-        'div[role="button"]:has-text("Share")', // Based on HTML provided
+        // More specific selectors targeting the post modal area
+        'div[role="button"]:text("Share")',  // Exact text match
         'div.x1i10hfl:has-text("Share")',  // Alternative with specific class
+        'div[role="button"] >> text=Share',  // Playwright's >> operator
         '[aria-label="Share"][role="button"]', // Aria-label based
+        'div:has-text("Share")[role="button"]',  // With role
         'button:has-text("Share")',  // Fallback
       ];
 
