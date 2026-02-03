@@ -1,0 +1,137 @@
+{
+  "timestamp": "2026-02-03T08:25:25.892995",
+  "hostname": "hackathon0-1vcpu-1gb",
+  "system": {
+    "uptime": "16 days, 14:50:14.893036",
+    "cpu_count": 1,
+    "cpu_percent": 100.0
+  },
+  "memory": {
+    "total_gb": 1.9218788146972656,
+    "available_gb": 0.3062629699707031,
+    "percent": 84.1,
+    "used_gb": 1.6156158447265625
+  },
+  "disk": {
+    "total_gb": 23.17425537109375,
+    "used_gb": 15.273380279541016,
+    "free_gb": 7.885250091552734,
+    "percent": 66.0
+  },
+  "network": {
+    "connections": 695,
+    "interfaces": {
+      "lo": {
+        "bytes_sent": 10459743789,
+        "bytes_recv": 10459743789,
+        "packets_sent": 43164626,
+        "packets_recv": 43164626
+      },
+      "eth0": {
+        "bytes_sent": 6083336444,
+        "bytes_recv": 16945793903,
+        "packets_sent": 36005219,
+        "packets_recv": 32180325
+      },
+      "eth1": {
+        "bytes_sent": 3466664,
+        "bytes_recv": 28286,
+        "packets_sent": 82256,
+        "packets_recv": 403
+      },
+      "docker0": {
+        "bytes_sent": 0,
+        "bytes_recv": 0,
+        "packets_sent": 0,
+        "packets_recv": 0
+      },
+      "br-f94ce15414f1": {
+        "bytes_sent": 2677703,
+        "bytes_recv": 2021428,
+        "packets_sent": 20918,
+        "packets_recv": 15636
+      },
+      "br-774ef7eb3543": {
+        "bytes_sent": 4972577298,
+        "bytes_recv": 4079328055,
+        "packets_sent": 18572113,
+        "packets_recv": 13453567
+      },
+      "veth4f47366": {
+        "bytes_sent": 7374289648,
+        "bytes_recv": 7542307114,
+        "packets_sent": 34250867,
+        "packets_recv": 32932248
+      },
+      "veth10648ad": {
+        "bytes_sent": 12514894520,
+        "bytes_recv": 11641956253,
+        "packets_sent": 51504505,
+        "packets_recv": 47704272
+      }
+    }
+  },
+  "processes": {
+    "gmail-watcher": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 0.0,
+      "uptime": 1769596136570,
+      "restarts": 0,
+      "pid": 2394377
+    },
+    "calendar-watcher": {
+      "status": "stopped",
+      "cpu": 0,
+      "memory_mb": 0.0,
+      "uptime": 1769591310657,
+      "restarts": 0,
+      "pid": 0
+    },
+    "odoo-watcher": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 0.0,
+      "uptime": 1769610995942,
+      "restarts": 2,
+      "pid": 2413366
+    },
+    "cloud-health-monitor": {
+      "status": "online",
+      "cpu": 0.2,
+      "memory_mb": 10.0,
+      "uptime": 1768893756727,
+      "restarts": 0,
+      "pid": 406903
+    },
+    "auto-approver": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 0.0,
+      "uptime": 1768858015732,
+      "restarts": 0,
+      "pid": 317853
+    },
+    "slack-watcher": {
+      "status": "online",
+      "cpu": 0,
+      "memory_mb": 0.0,
+      "uptime": 1769596260697,
+      "restarts": 1,
+      "pid": 2394791
+    },
+    "git-sync-push": {
+      "status": "online",
+      "cpu": 0.2,
+      "memory_mb": 10.0,
+      "uptime": 1770059503670,
+      "restarts": 0,
+      "pid": 1025132
+    }
+  },
+  "alerts": [
+    "HIGH CPU: 100.0%",
+    "HIGH MEMORY: 84.1%",
+    "PROCESS STOPPED: calendar-watcher"
+  ]
+}
